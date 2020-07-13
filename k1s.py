@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 
+SHOW_TYPES=True
+
 # Remember to make sure ~/.kube/config is pointing to a valid cluster or kubernetes import will timeout ... after quite a while ...
 
+        
 #import datetime;
 #now = datetime.datetime.now(); print(now)
 #from pprint import pprint
@@ -78,12 +81,15 @@ def sprint_nodes():
     #global nodes
     #nodes = {}
 
+    type =  'node/' if SHOW_TYPES else ''
+
     ret = corev1.list_node(watch=False)
     retstr = ""
     for i in ret.items:
         node_ip   = i.status.addresses[0].address
         node_name = i.metadata.name
-        retstr += f"{i.metadata.name:12s} {node_ip:16s}\n"
+        retstr += f"{type}{i.metadata.name:12s} { green( node_ip ) :16s}\n"
+        #info=$(c 32)$(jq -r '.object.status.addresses[0].address' <<<"$event")$(c 0);;
         #nodes[node_ip] = node_name
     return retstr
 
@@ -103,6 +109,7 @@ def print_pods(namespace='all'): print(sprint_pods(namespace))
 
 def sprint_pods(namespace='all'):
     op=''
+    type =  'pod/' if SHOW_TYPES else ''
 
     if namespace == 'all':
         ret = corev1.list_pod_for_all_namespaces(watch=False)
@@ -116,14 +123,30 @@ def sprint_pods(namespace='all'):
         host = host_ip
         if host_ip in nodes:
             host = nodes[host_ip]
+            if   "ma" in host: host=cyan(host)
+            elif "wo" in host: host=magenta(host)
+            else:              pass
         #print(f"{i.metadata.namespace:12s} {i.metadata.name:42s} {i.status.pod_ip:16s} {i.status.host_ip:16s}")
-        op += f"{i.metadata.namespace:12s} {i.metadata.name:42s} {i.status.pod_ip:16s} {i.status.host_ip:16s}\n"
+        phase=i.status.phase
+        is_ready=False
+        is_scheduled=False
+        for cond in i.status.conditions:
+            if cond.type == 'Ready'        and cond.status == "True": is_ready=True
+            if cond.type == 'PodScheduled' and cond.status == "True": is_scheduled=True
+        #print(i.status.conditions)
+        if is_scheduled and (not is_ready):
+            info='NonReady'
+        else:
+            info=phase
+        if info == "Running": info=green("Running")
+        op += f"{type}{i.metadata.namespace:12s} {i.metadata.name:42s} {i.status.pod_ip:16s} {host:16s} {info}\n"
     return op
 
 def print_deployments(namespace='all'): print(sprint_deployments(namespace))
 
 def sprint_deployments(namespace='all'):
     op=''
+    type =  'deploy/' if SHOW_TYPES else ''
 
     if namespace == 'all':
         ret = appsv1.list_deployment_for_all_namespaces(watch=False)
@@ -131,7 +154,14 @@ def sprint_deployments(namespace='all'):
         ret = appsv1.list_namespaced_deployment(watch=False, namespace=namespace)
     for i in ret.items:
         #print(f"{i.metadata.namespace:12s} {i.metadata.name:42s}")
-        op += f"{i.metadata.namespace:12s} {i.metadata.name:42s}\n"
+        spec=i.spec.replicas
+        stat=i.status.ready_replicas
+        if stat == spec:
+            info=green(f'{stat}/{spec}')
+        else:
+            info=yellow(f'{stat}/{spec}')
+        op += f"{type}{i.metadata.namespace:12s} {i.metadata.name:42s} {info}\n"
+        #op += f"{type}{i.metadata.namespace:12s} {i.metadata.name:42s}\n"
     return op
         
 
@@ -139,6 +169,7 @@ def print_daemon_sets(namespace='all'): print(sprint_daemon_sets(namespace))
 
 def sprint_daemon_sets(namespace='all'):
     op=''
+    type =  'ds/' if SHOW_TYPES else ''
 
     if namespace == 'all':
         ret = appsv1.list_daemon_set_for_all_namespaces(watch=False)
@@ -146,13 +177,14 @@ def sprint_daemon_sets(namespace='all'):
         ret = appsv1.list_namespaced_daemon_set(watch=False, namespace=namespace)
     for i in ret.items:
         #print(f"{i.metadata.namespace:12s} {i.metadata.name:42s}")
-        op += f"{i.metadata.namespace:12s} {i.metadata.name:42s}\n"
+        op += f"{type}{i.metadata.namespace:12s} {i.metadata.name:42s}\n"
     return op
         
 def print_stateful_sets(namespace='all'): print(sprint_stateful_sets(namespace))
 
 def sprint_stateful_sets(namespace='all'):
     op=''
+    type =  'ss/' if SHOW_TYPES else ''
 
     if namespace == 'all':
         ret = appsv1.list_stateful_set_for_all_namespaces(watch=False)
@@ -160,7 +192,14 @@ def sprint_stateful_sets(namespace='all'):
         ret = appsv1.list_namespaced_stateful_set(watch=False, namespace=namespace)
     for i in ret.items:
         #print(f"{i.metadata.namespace:12s} {i.metadata.name:42s}")
-        op += f"{i.metadata.namespace:12s} {i.metadata.name:42s}\n"
+        spec=i.spec.replicas
+        stat=i.status.ready_replicas
+        if stat == spec:
+            info=green(f'{stat}/{spec}')
+        else:
+            info=yellow(f'{stat}/{spec}')
+        op += f"{type}{i.metadata.namespace:12s} {i.metadata.name:42s} {info}\n"
+        #op += f"{type}{i.metadata.namespace:12s} {i.metadata.name:42s}\n"
     return op
         
 
@@ -168,6 +207,7 @@ def print_replica_sets(namespace='all'): print(sprint_replica_sets(namespace))
 
 def sprint_replica_sets(namespace='all'):
     op=''
+    type =  'rs/' if SHOW_TYPES else ''
 
     if namespace == 'all':
         ret = appsv1.list_replica_set_for_all_namespaces(watch=False)
@@ -175,7 +215,14 @@ def sprint_replica_sets(namespace='all'):
         ret = appsv1.list_namespaced_replica_set(watch=False, namespace=namespace)
     for i in ret.items:
         #print(f"{i.metadata.namespace:12s} {i.metadata.name:42s}")
-        op += f"{i.metadata.namespace:12s} {i.metadata.name:42s}\n"
+        #stat=0 #print(i.status) #sys.exit(0) #if 'readyReplicas' in i.status: stat=i.status.readyReplicas
+        spec=i.spec.replicas
+        stat=i.status.ready_replicas
+        if stat == spec:
+            info=green(f'{stat}/{spec}')
+        else:
+            info=yellow(f'{stat}/{spec}')
+        op += f"{type}{i.metadata.namespace:12s} {i.metadata.name:42s} {info}\n"
     return op
         
 
@@ -183,6 +230,7 @@ def print_services(namespace='all'): print(sprint_services(namespace))
 
 def sprint_services(namespace='all'):
     op=''
+    type =  'svc/' if SHOW_TYPES else ''
 
     if namespace == 'all':
         ret = corev1.list_service_for_all_namespaces(watch=False)
@@ -190,7 +238,7 @@ def sprint_services(namespace='all'):
         ret = corev1.list_namespaced_service(watch=False, namespace=namespace)
     for i in ret.items:
         #print(f"{i.metadata.namespace:12s} {i.metadata.name:42s}")
-        op += f"{i.metadata.namespace:12s} {i.metadata.name:42s}\n"
+        op += f"{type}{i.metadata.namespace:12s} {i.metadata.name:42s}\n"
     return op
         
 
@@ -198,6 +246,7 @@ def print_jobs(namespace='all'): print(sprint_jobs(namespace))
 
 def sprint_jobs(namespace='all'):
     op=''
+    type =  'job/' if SHOW_TYPES else ''
 
     if namespace == 'all':
         ret = batchv1.list_job_for_all_namespaces(watch=False)
@@ -205,14 +254,15 @@ def sprint_jobs(namespace='all'):
         ret = batchv1.list_namespaced_job(watch=False, namespace=namespace)
     for i in ret.items:
         #print(f"{i.metadata.namespace:12s} {i.metadata.name:42s}")
-        op += f"{i.metadata.namespace:12s} {i.metadata.name:42s}\n"
+        op += f"{type}{i.metadata.namespace:12s} {i.metadata.name:42s}\n"
     return op
-        
+
 
 def print_cron_jobs(namespace='all'): print(sprint_cron_jobs(namespace))
 
 def sprint_cron_jobs(namespace='all'):
     op=''
+    type =  'cronjob/' if SHOW_TYPES else ''
 
     if namespace == 'all':
         ret = batchv1beta1.list_cron_job_for_all_namespaces(watch=False)
@@ -220,7 +270,7 @@ def sprint_cron_jobs(namespace='all'):
         ret = batchv1beta1.list_namespaced_cron_job(watch=False, namespace=namespace)
     for i in ret.items:
         #print(f"{i.metadata.namespace:12s} {i.metadata.name:42s}")
-        op += f"{i.metadata.namespace:12s} {i.metadata.name:42s}\n"
+        op += f"{type}{i.metadata.namespace:12s} {i.metadata.name:42s}\n"
     return op
         
 def test_methods():
@@ -289,6 +339,11 @@ while a <= (len(sys.argv)-1):
     arg=sys.argv[a];
     #print(f'sys.argv[{a}]={sys.argv[a]}')
     a+=1
+    if arg == "-st":            SHOW_TYPES=True;  continue
+    if arg == "-show-types":    SHOW_TYPES=True;  continue
+    if arg == "-nst":           SHOW_TYPES=False; continue
+    if arg == "-no-show-types": SHOW_TYPES=False; continue
+
     if arg == "-test":
         test_methods()
         sys.exit(0)
@@ -327,8 +382,8 @@ if namespace == "-": namespace="all"
 last_op=''
 while True:
     op=''
-    op += bold_white(f'Namespace: {namespace}\n')
-    op += bold_blue(f'Resources: { " ".join(resources) }\n')
+    op += f'{ bold_white("Namespace:") } { bold_green(namespace) }\n'
+    op += f'{ bold_white("Resources:") } { bold_blue( " ".join(resources) ) }\n'
 
     nodes = get_nodes()
 
