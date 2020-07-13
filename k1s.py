@@ -139,7 +139,7 @@ def sprint_pods(namespace='all'):
         else:
             info=phase
         if info == "Running": info=green("Running")
-        op += f"{type}{i.metadata.namespace:12s} {i.metadata.name:42s} {i.status.pod_ip:16s} {host:16s} {info}\n"
+        op += f"{i.metadata.namespace:12s} {type}{i.metadata.name:32s} {info} {i.status.pod_ip:15s}/{host}\n"
     return op
 
 def print_deployments(namespace='all'): print(sprint_deployments(namespace))
@@ -362,7 +362,7 @@ while a <= (len(sys.argv)-1):
         a+=1;
         continue
 
-    if namespace == None: namespace = arg; continue
+    #if namespace == None: namespace = arg; continue
     #if resources == []: resources = [arg]; continue
     resources.append( arg )
     #die
@@ -373,9 +373,10 @@ for reslist in resources:
     #print(f'reslist={reslist}')
     if "," in reslist:
         res = reslist.split(",")
+        final_resources.extend(res)
     else:
         res = reslist
-    final_resources.extend(res)
+        final_resources.append(res)
     #print(f'final_resources={final_resources}')
 
 resources=final_resources
