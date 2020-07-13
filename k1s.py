@@ -125,6 +125,8 @@ def get_cronjobs(namespace='all'):
         print(f"{i.metadata.namespace:12s} {i.metadata.name:42s}")
         
 def test_methods():
+    global nodes
+
     print("\n======== Listing nodes with their IPs:")
     nodes = get_nodes()
     
