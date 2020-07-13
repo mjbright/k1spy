@@ -374,7 +374,7 @@ for reslist in resources:
     if "," in reslist:
         res = reslist.split(",")
     else:
-        reslist = res
+        res = reslist
     final_resources.extend(res)
     #print(f'final_resources={final_resources}')
 
