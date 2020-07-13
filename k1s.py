@@ -364,14 +364,17 @@ while a <= (len(sys.argv)-1):
 
     if namespace == None: namespace = arg; continue
     #if resources == []: resources = [arg]; continue
-    resources.extend( arg )
+    resources.append( arg )
     #die
     #print(arg)
 
 final_resources=[]
 for reslist in resources:
     #print(f'reslist={reslist}')
-    res = reslist.split(",")
+    if "," in reslist:
+        res = reslist.split(",")
+    else:
+        reslist = res
     final_resources.extend(res)
     #print(f'final_resources={final_resources}')
 
