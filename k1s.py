@@ -323,7 +323,7 @@ def test_methods():
 #test_methods()
 
 default_namespace="default"
-default_resources="pods"
+default_resources=["pods"]
 
 # Clears but keeps at bottom of screeen:
 #def cls(): print(chr(27) + "[2J")
@@ -370,21 +370,21 @@ while a <= (len(sys.argv)-1):
 
 final_resources=[]
 for reslist in resources:
-    print(f'reslist={reslist}')
+    #print(f'reslist={reslist}')
     res = reslist.split(",")
     final_resources.extend(res)
-    print(f'final_resources={final_resources}')
+    #print(f'final_resources={final_resources}')
 
 resources=final_resources
+
+if namespace == None: namespace=default_namespace
+if namespace == "-": namespace="all"
+
+if len(resources) == 0: resources = [default_resources]
 
 print(f'namespace={namespace}')
 print(f'resources={resources}')
 #sys.exit(0)
-
-if len(resources) == 0: resources = [default_resources]
-
-if namespace == None: namespace=default_namespace
-if namespace == "-": namespace="all"
 
 last_op=''
 while True:
