@@ -209,9 +209,9 @@ def sprint_jobs(namespace='all'):
     return op
         
 
-def print_cronjobs(namespace='all'): print(sprint_cronjobs(namespace))
+def print_cron_jobs(namespace='all'): print(sprint_cron_jobs(namespace))
 
-def sprint_cronjobs(namespace='all'):
+def sprint_cron_jobs(namespace='all'):
     op=''
 
     if namespace == 'all':
@@ -239,14 +239,19 @@ def test_methods():
     print("\n---- [namespace='default'] Listing deployments:")
     print_deployments(namespace='default')
     
-    print("\n======== [all namespaces] Listing daemonsets:")
+    print("\n======== [all namespaces] Listing daemon_sets:")
     print_daemon_sets()
-    print("\n---- [namespace='default'] Listing daemonsets:")
+    print("\n---- [namespace='default'] Listing daemon_sets:")
     print_daemon_sets(namespace='default')
     
-    print("\n======== [all namespaces] Listing replicasets:")
+    print("\n======== [all namespaces] Listing stateful_sets:")
+    print_stateful_sets()
+    print("\n---- [namespace='default'] Listing stateful_sets:")
+    print_stateful_sets(namespace='default')
+    
+    print("\n======== [all namespaces] Listing replica_sets:")
     print_replica_sets()
-    print("\n---- [namespace='default'] Listing replicasets:")
+    print("\n---- [namespace='default'] Listing replica_sets:")
     print_replica_sets(namespace='default')
     
     print("\n======== [all namespaces] Listing services:")
@@ -259,10 +264,10 @@ def test_methods():
     print("\n---- [namespace='default'] Listing jobs:")
     print_jobs(namespace='default')
     
-    print("\n======== [all namespaces] Listing cronjobs:")
-    print_cronjobs()
-    print("\n---- [namespace='default'] Listing cronjobs:")
-    print_cronjobs(namespace='default')
+    print("\n======== [all namespaces] Listing cron_jobs:")
+    print_cron_jobs()
+    print("\n---- [namespace='default'] Listing cron_jobs:")
+    print_cron_jobs(namespace='default')
 
 #test_methods()
 
