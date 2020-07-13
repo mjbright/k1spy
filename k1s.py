@@ -364,7 +364,7 @@ while a <= (len(sys.argv)-1):
 
     if namespace == None: namespace = arg; continue
     #if resources == []: resources = [arg]; continue
-    resources.append( arg )
+    resources.extend( arg )
     #die
     #print(arg)
 
