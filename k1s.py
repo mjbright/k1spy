@@ -149,6 +149,20 @@ def sprint_daemon_sets(namespace='all'):
         op += f"{i.metadata.namespace:12s} {i.metadata.name:42s}\n"
     return op
         
+def print_stateful_sets(namespace='all'): print(sprint_stateful_sets(namespace))
+
+def sprint_stateful_sets(namespace='all'):
+    op=''
+
+    if namespace == 'all':
+        ret = appsv1.list_stateful_set_for_all_namespaces(watch=False)
+    else:
+        ret = appsv1.list_namespaced_stateful_set(watch=False, namespace=namespace)
+    for i in ret.items:
+        #print(f"{i.metadata.namespace:12s} {i.metadata.name:42s}")
+        op += f"{i.metadata.namespace:12s} {i.metadata.name:42s}\n"
+    return op
+        
 
 def print_replica_sets(namespace='all'): print(sprint_replica_sets(namespace))
 
