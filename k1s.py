@@ -347,6 +347,12 @@ while a <= (len(sys.argv)-1):
     if arg == "-test":
         test_methods()
         sys.exit(0)
+
+    if arg == "-slow":
+        # Slow changing resources:
+        resources = [ 'node', 'svc', 'deploy', 'ds', 'rs', 'ss' ]
+        continue
+
     if arg == "-n":
         namespace=sys.argv[a];
         a+=1;
