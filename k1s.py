@@ -383,6 +383,7 @@ print(f'resources={resources}')
 
 if len(resources) == 0: resources = [default_resources]
 
+if namespace == None: namespace=default_namespace
 if namespace == "-": namespace="all"
 
 last_op=''
