@@ -225,9 +225,10 @@ def sprint_cron_jobs(namespace='all'):
         
 def test_methods():
     global nodes
+    nodes = get_nodes()
 
     print("\n======== Listing nodes with their IPs:")
-    nodes = print_nodes()
+    print_nodes()
     
     print("\n======== [all namespaces] Listing pods with their IPs:")
     print_pods()
@@ -288,6 +289,9 @@ while a <= (len(sys.argv)-1):
     arg=sys.argv[a];
     #print(f'sys.argv[{a}]={sys.argv[a]}')
     a+=1
+    if arg == "-test":
+        test_methods()
+        sys.exit(0)
     if arg == "-n":
         namespace=sys.argv[a];
         a+=1;
