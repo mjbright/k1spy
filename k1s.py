@@ -138,10 +138,12 @@ def sprint_pods(namespace='all'):
         is_ready=False
         is_scheduled=False
 
-        for cond in i.status.conditions:
-            if cond.type == 'Ready'        and cond.status == "True": is_ready=True
-            if cond.type == 'PodScheduled' and cond.status == "True": is_scheduled=True
-        #print(i.status.conditions)
+        if 'conditions' in i.status:
+            for cond in i.status.conditions:
+                if cond.type == 'Ready'        and cond.status == "True": is_ready=True
+                if cond.type == 'PodScheduled' and cond.status == "True": is_scheduled=True
+            #print(i.status.conditions)
+
         info=''
         if is_scheduled and (not is_ready):
             info='NonReady'
