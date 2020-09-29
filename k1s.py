@@ -14,6 +14,9 @@ import sys, time
 from kubernetes import client, config
 #now = datetime.datetime.now(); print(now)
 
+# For timestamp handling:
+from datetime import datetime
+
 config.load_kube_config()
 #config.load_incluster_config()
 
@@ -108,6 +111,28 @@ def get_nodes():
         
 def print_pods(namespace='all'): print(sprint_pods(namespace))
 
+def setHMS(AGEsecs):
+    OP=""
+
+    try:
+        if AGEsecs > 3600 * 24: # > 1d
+            days = int(AGEsecs / 3600 / 24)
+            AGEsecs = AGEsecs - (3600 * 24 * days)
+            OP+=f"{days}d"
+        if AGEsecs > 3600: # > 1h
+            hours = int(AGEsecs / 3600)
+            AGEsecs = AGEsecs - (3600 * hours)
+            OP+=f"{hours:02d}h"
+        if AGEsecs > 60: # > 1m
+            mins = int(AGEsecs / 60)
+            AGEsecs = AGEsecs - (60 * mins)
+            OP+=f"{mins:02d}m"
+        OP+=f"{AGEsecs:02}s"
+        return OP
+    except:
+        return "-"
+
+
 def sprint_pods(namespace='all'):
     op=''
     type =  'pod/' if SHOW_TYPES else ''
@@ -123,6 +148,9 @@ def sprint_pods(namespace='all'):
         pod_ip        = i.status.pod_ip
         host_ip       = i.status.host_ip
         host          = host_ip
+
+        creation_time = str(i.metadata.creation_timestamp)
+        if '+00:00' in creation_time: creation_time = creation_time[ : creation_time.find('+00:00') ]
 
         if pod_ip == None: pod_ip="-"
         if host   == None: host="-"
@@ -146,19 +174,50 @@ def sprint_pods(namespace='all'):
 
         info=''
         if is_scheduled and (not is_ready):
-            info='NonReady'
+            try:
+                # print(f"i.status=<{i.status}>")
+                # kubectl get pods $L -o custom-columns=NAME:.metadata.name,STATUS:.status.containerStatuses[0].state.terminated.reason
+                container0 = i.status.container_statuses[0] # !!
+                #print(f"container0=<{container0}>")
+                #print(f"container0.state=<{container0.state}>")
+                #print(f"container0.state.terminated=<{container0.state.terminated}>")
+                #print(f"container0.state.terminated.reason=<{container0.state.terminated.reason}>")
+                info=container0.state.terminated.reason
+                #print(f"info=<{info}>")
+            except:
+                info='NonReady'
+
         else:
             info=phase
         if info == "Running": info=green("Running")
+
+        try:
+            d = datetime.strptime(creation_time, "%Y-%m-%d %H:%M:%S")
+            AGE=time.mktime(d.timetuple())
+            d = datetime.now()
+            NOW=time.mktime(d.timetuple())
+            AGE=NOW-AGE
+            AGE=int(AGE) # Remove .0
+            #AGE=AGE[:-2] # Remove .0
+        except:
+            AGE=0
+
+        AGE=setHMS(AGE)
 
         if VERBOSE: # Checking for unset vars
             print(f"namespace={i.metadata.namespace:12s}")
             print(f"type/name={type}{i.metadata.name:32s}")
             print(f"info={info}")
             print(f"pod_ip/host={pod_ip:15s}/{host}\n")
+            print(f"creation_time={creation_time}")
+            print(f"AGE={AGE}\n")
 
-        op += f"{i.metadata.namespace:12s} {type}{i.metadata.name:32s} {info} {pod_ip:15s}/{host}\n"
+
+        op += f"{i.metadata.namespace:12s} {type}{i.metadata.name:32s} {info} {pod_ip:15s}/{host} {AGE}\n"
     return op
+
+
+
 
 def print_deployments(namespace='all'): print(sprint_deployments(namespace))
 
