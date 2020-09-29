@@ -2,8 +2,9 @@
 
 SHOW_TYPES=True
 
-# Remember to make sure ~/.kube/config is pointing to a valid cluster or kubernetes import will timeout ... after quite a while ...
+VERBOSE=False
 
+# Remember to make sure ~/.kube/config is pointing to a valid cluster or kubernetes import will timeout ... after quite a while ...
         
 #import datetime;
 #now = datetime.datetime.now(); print(now)
@@ -115,31 +116,46 @@ def sprint_pods(namespace='all'):
         ret = corev1.list_pod_for_all_namespaces(watch=False)
     else:
         ret = corev1.list_namespaced_pod(watch=False, namespace=namespace)
+
     for i in ret.items:
-        pod_name = i.metadata.name
+        pod_name      = i.metadata.name
         pod_namespace = i.metadata.namespace
-        pod_ip = i.status.pod_ip
-        host_ip = i.status.host_ip
-        host = host_ip
+        pod_ip        = i.status.pod_ip
+        host_ip       = i.status.host_ip
+        host          = host_ip
+
+        if pod_ip == None: pod_ip="-"
+        if host   == None: host="-"
+
         if host_ip in nodes:
             host = nodes[host_ip]
             if   "ma" in host: host=cyan(host)
             elif "wo" in host: host=magenta(host)
             else:              pass
         #print(f"{i.metadata.namespace:12s} {i.metadata.name:42s} {i.status.pod_ip:16s} {i.status.host_ip:16s}")
+
         phase=i.status.phase
         is_ready=False
         is_scheduled=False
+
         for cond in i.status.conditions:
             if cond.type == 'Ready'        and cond.status == "True": is_ready=True
             if cond.type == 'PodScheduled' and cond.status == "True": is_scheduled=True
         #print(i.status.conditions)
+        info=''
         if is_scheduled and (not is_ready):
             info='NonReady'
         else:
             info=phase
         if info == "Running": info=green("Running")
-        op += f"{i.metadata.namespace:12s} {type}{i.metadata.name:32s} {info} {i.status.pod_ip:15s}/{host}\n"
+
+        if VERBOSE: # Checking for unset vars
+            print(f"namespace={i.metadata.namespace:12s}")
+            print(f"type/name={type}{i.metadata.name:32s}")
+            print(f"info={info}")
+            print(f"pod_ip/host={pod_ip:15s}/{host}\n")
+
+        op += f"{i.metadata.namespace:12s} {type}{i.metadata.name:32s} {info} {pod_ip:15s}/{host}\n"
     return op
 
 def print_deployments(namespace='all'): print(sprint_deployments(namespace))
@@ -343,6 +359,8 @@ while a <= (len(sys.argv)-1):
     if arg == "-show-types":    SHOW_TYPES=True;  continue
     if arg == "-nst":           SHOW_TYPES=False; continue
     if arg == "-no-show-types": SHOW_TYPES=False; continue
+
+    if arg == "-v": VERBOSE=True; continue
 
     if arg == "-test":
         test_methods()
