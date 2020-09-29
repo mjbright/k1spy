@@ -384,7 +384,8 @@ resources=final_resources
 if namespace == None: namespace=default_namespace
 if namespace == "-": namespace="all"
 
-if len(resources) == 0: resources = [default_resources]
+#if len(resources) == 0: resources = [default_resources]
+if len(resources) == 0: resources = default_resources
 
 print(f'namespace={namespace}')
 print(f'resources={resources}')
@@ -394,6 +395,8 @@ last_op=''
 while True:
     op=''
     op += f'{ bold_white("Namespace:") } { bold_green(namespace) }\n'
+    #print(type(resources))
+    #print(resources)
     op += f'{ bold_white("Resources:") } { bold_blue( " ".join(resources) ) }\n'
 
     nodes = get_nodes()
