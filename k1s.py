@@ -166,18 +166,23 @@ def sprint_pods(namespace='all'):
         is_ready=False
         is_scheduled=False
 
-        if 'conditions' in i.status:
-            for cond in i.status.conditions:
-                if cond.type == 'Ready'        and cond.status == "True": is_ready=True
-                if cond.type == 'PodScheduled' and cond.status == "True": is_scheduled=True
+        status = i.status.to_dict()
+        if 'conditions' in status:
+            if status['conditions']:
+                for cond in status['conditions']:
+                    if 'type' in cond:
+                        ctype = cond['type']
+                        cstatus = cond['status']
+                        if ctype == 'Ready'        and cstatus == "True": is_ready=True
+                        if ctype == 'PodScheduled' and cstatus == "True": is_scheduled=True
             #print(i.status.conditions)
 
         info=''
         if is_scheduled and (not is_ready):
             try:
-                # print(f"i.status=<{i.status}>")
+                # print(f"status=<{status}>")
                 # kubectl get pods $L -o custom-columns=NAME:.metadata.name,STATUS:.status.containerStatuses[0].state.terminated.reason
-                container0 = i.status.container_statuses[0] # !!
+                container0 = status.container_statuses[0] # !!
                 #print(f"container0=<{container0}>")
                 #print(f"container0.state=<{container0.state}>")
                 #print(f"container0.state.terminated=<{container0.state.terminated}>")
