@@ -92,6 +92,8 @@ def sprint_nodes():
     for i in ret.items:
         node_ip   = i.status.addresses[0].address
         node_name = i.metadata.name
+        AGE = get_age(i)
+        #retstr += f"{type}{i.metadata.name:12s} { green( node_ip ) :16s} {AGE}\n"
         retstr += f"{type}{i.metadata.name:12s} { green( node_ip ) :16s}\n"
         #info=$(c 32)$(jq -r '.object.status.addresses[0].address' <<<"$event")$(c 0);;
         #nodes[node_ip] = node_name
@@ -132,6 +134,23 @@ def setHMS(AGEsecs):
     except:
         return "-"
 
+def get_age(i):
+    creation_time = str(i.metadata.creation_timestamp)
+    if '+00:00' in creation_time: creation_time = creation_time[ : creation_time.find('+00:00') ]
+
+    try:
+        d = datetime.strptime(creation_time, "%Y-%m-%d %H:%M:%S")
+        AGE=time.mktime(d.timetuple())
+        d = datetime.now()
+        NOW=time.mktime(d.timetuple())
+        AGE=NOW-AGE
+        AGE=int(AGE) # Remove .0
+        #AGE=AGE[:-2] # Remove .0
+    except:
+        AGE=0
+
+    return setHMS(AGE)
+
 
 def sprint_pods(namespace='all'):
     op=''
@@ -148,9 +167,6 @@ def sprint_pods(namespace='all'):
         pod_ip        = i.status.pod_ip
         host_ip       = i.status.host_ip
         host          = host_ip
-
-        creation_time = str(i.metadata.creation_timestamp)
-        if '+00:00' in creation_time: creation_time = creation_time[ : creation_time.find('+00:00') ]
 
         if pod_ip == None: pod_ip="-"
         if host   == None: host="-"
@@ -191,23 +207,21 @@ def sprint_pods(namespace='all'):
                 #print(f"info=<{info}>")
             except:
                 info='NonReady'
+                #print( i.metadata )
 
         else:
             info=phase
         if info == "Running": info=green("Running")
 
-        try:
-            d = datetime.strptime(creation_time, "%Y-%m-%d %H:%M:%S")
-            AGE=time.mktime(d.timetuple())
-            d = datetime.now()
-            NOW=time.mktime(d.timetuple())
-            AGE=NOW-AGE
-            AGE=int(AGE) # Remove .0
-            #AGE=AGE[:-2] # Remove .0
-        except:
-            AGE=0
+        if hasattr(i.metadata,'deletion_timestamp'):
+            #print( i.metadata )
+            #print("GOT IT")
+            #print( i.metadata.deletion_timestamp )
+            #sys.exit(1)
+            if i.metadata.deletion_timestamp: info = "Terminating"
+            #if i.metadata.deletionTimestamp != null: info == "Terminating"
 
-        AGE=setHMS(AGE)
+        AGE = get_age(i)
 
         if VERBOSE: # Checking for unset vars
             print(f"namespace={i.metadata.namespace:12s}")
@@ -280,7 +294,8 @@ def sprint_stateful_sets(namespace='all'):
             info=green(f'{stat}/{spec}')
         else:
             info=yellow(f'{stat}/{spec}')
-        op += f"{type}{i.metadata.namespace:12s} {i.metadata.name:42s} {info}\n"
+        AGE = get_age(i)
+        op += f"{type}{i.metadata.namespace:12s} {i.metadata.name:42s} {info} {AGE}\n"
         #op += f"{type}{i.metadata.namespace:12s} {i.metadata.name:42s}\n"
     return op
         
@@ -304,7 +319,9 @@ def sprint_replica_sets(namespace='all'):
             info=green(f'{stat}/{spec}')
         else:
             info=yellow(f'{stat}/{spec}')
-        op += f"{type}{i.metadata.namespace:12s} {i.metadata.name:42s} {info}\n"
+
+        AGE = get_age(i)
+        op += f"{type}{i.metadata.namespace:12s} {i.metadata.name:42s} {info} {AGE}\n"
     return op
         
 def print_replica_sets(namespace='all'): print(sprint_replica_sets(namespace))
@@ -326,7 +343,8 @@ def sprint_replica_sets(namespace='all'):
             info=green(f'{stat}/{spec}')
         else:
             info=yellow(f'{stat}/{spec}')
-        op += f"{type}{i.metadata.namespace:12s} {i.metadata.name:42s} {info}\n"
+        AGE = get_age(i)
+        op += f"{type}{i.metadata.namespace:12s} {i.metadata.name:42s} {info} {AGE}\n"
     return op
         
 
@@ -342,8 +360,17 @@ def sprint_services(namespace='all'):
         ret = corev1.list_namespaced_service(watch=False, namespace=namespace)
     for i in ret.items:
         #print(f"{i.metadata.namespace:12s} {i.metadata.name:42s}")
-        op += f"{type}{i.metadata.namespace:12s} {i.metadata.name:42s}\n"
-    return op
+        AGE = get_age(i)
+        NPORT=""
+        spec = i.spec.to_dict()
+        #{'cluster_ip': '10.109.121.252', 'external_i_ps': None, 'external_name': None, 'external_traffic_policy': None, 'health_check_node_port': None, 'load_balancer_ip': None, 'load_balancer_source_ranges': None, 'ports': [{'name': None, 'node_port': None, 'port': 80, 'protocol': 'TCP', 'target_port': 80}], 'publish_not_ready_addresses': None, 'selector': {'app': 'ckad-demo-green'}, 'session_affinity': 'None', 'session_affinity_config': None, 'type': 'ClusterIP'}
+
+        #print(spec)
+        #if 'ports' in spec and 'nodePort' in spec.ports[0]:
+            #NPORT=f"{spec.ports[0].nodePort} "
+        if 'ports' in spec and 'node_port' in spec['ports'][0]:
+            port0=spec['ports'][0]
+            NPORT=f" NodePort:{port0['port']}:{port0['node_port']}"
         
 
 def print_jobs(namespace='all'): print(sprint_jobs(namespace))
@@ -358,7 +385,8 @@ def sprint_jobs(namespace='all'):
         ret = batchv1.list_namespaced_job(watch=False, namespace=namespace)
     for i in ret.items:
         #print(f"{i.metadata.namespace:12s} {i.metadata.name:42s}")
-        op += f"{type}{i.metadata.namespace:12s} {i.metadata.name:42s}\n"
+        AGE = get_age(i)
+        op += f"{type}{i.metadata.namespace:12s} {i.metadata.name:42s} {AGE}\n"
     return op
 
 
@@ -374,7 +402,8 @@ def sprint_cron_jobs(namespace='all'):
         ret = batchv1beta1.list_namespaced_cron_job(watch=False, namespace=namespace)
     for i in ret.items:
         #print(f"{i.metadata.namespace:12s} {i.metadata.name:42s}")
-        op += f"{type}{i.metadata.namespace:12s} {i.metadata.name:42s}\n"
+        AGE = get_age(i)
+        op += f"{type}{i.metadata.namespace:12s} {i.metadata.name:42s} {AGE}\n"
     return op
         
 def test_methods():
