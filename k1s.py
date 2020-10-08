@@ -378,6 +378,15 @@ def sprint_services(namespace='all'):
             port0=spec['ports'][0]
             NPORT=f" NodePort:{port0['port']}:{port0['node_port']}"
         
+        CIP=spec['cluster_ip']
+        #POLICY=f"external_traffic_policy={spec['external_traffic_policy']}"
+        #POLICY=spec['external_traffic_policy']
+        #if not POLICY: POLICY=" "
+        POLICY=""
+        op += f"{type}{i.metadata.namespace:12s} {i.metadata.name:42s} {CIP:15s}{NPORT:12s}{POLICY:8s} {AGE}\n"
+
+
+    return op
 
 def print_jobs(namespace='all'): print(sprint_jobs(namespace))
 
