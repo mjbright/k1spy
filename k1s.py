@@ -111,6 +111,12 @@ def get_nodes():
         nodes[node_ip] = node_name
     return nodes
         
+#LATER: requires new fields
+#def print_pvs(namespace='all'):  print(sprint_pvs(namespace))
+#def sprint_pvcs(namespace):
+#def print_pvcs(namespace='all'): print(sprint_pvcs(namespace))
+#def sprint_pvs(namespace):
+
 def print_pods(namespace='all'): print(sprint_pods(namespace))
 
 def setHMS(AGEsecs):
@@ -546,12 +552,14 @@ while True:
         if resource.find("no") == 0:         op+='\n'+sprint_nodes()
         if resource.find("svc") == 0:        op+='\n'+sprint_services(namespace)
         if resource.find("service") == 0:    op+='\n'+sprint_services(namespace)
-        if resource.find("dep") == 0:     op+='\n'+sprint_deployments(namespace)
+        if resource.find("dep") == 0:        op+='\n'+sprint_deployments(namespace)
         #if resource.find("deploy") == 0:     op+='\n'+sprint_deployments(namespace)
         if resource.find("rs") == 0:         op+='\n'+sprint_replica_sets(namespace)
         if resource.find("ss") == 0:         op+='\n'+sprint_stateful_sets(namespace)
         if resource.find("replicaset") == 0: op+='\n'+sprint_replica_sets(namespace)
         if resource.find("po") == 0:         op+='\n'+sprint_pods(namespace)
+        # LATER: if resource.find("pvc") == 0:        op+='\n'+sprint_pvcs(namespace)
+        # LATER: if resource.find("pv") == 0:         op+='\n'+sprint_pvs(namespace)
      
     if op != last_op:
         cls()
