@@ -285,6 +285,28 @@ def sprint_stateful_sets(namespace='all'):
     return op
         
 
+def print_replica_sets(namespace='all'): print(sprint_stateful_sets(namespace))
+
+def sprint_replica_sets(namespace='all'):
+    op=''
+    type =  'rs/' if SHOW_TYPES else ''
+
+    if namespace == 'all':
+        ret = appsv1.list_replica_set_for_all_namespaces(watch=False)
+    else:
+        ret = appsv1.list_namespaced_replica_set(watch=False, namespace=namespace)
+    for i in ret.items:
+        #print(f"{i.metadata.namespace:12s} {i.metadata.name:42s}")
+        #stat=0 #print(i.status) #sys.exit(0) #if 'readyReplicas' in i.status: stat=i.status.readyReplicas
+        spec=i.spec.replicas
+        stat=i.status.ready_replicas
+        if stat == spec:
+            info=green(f'{stat}/{spec}')
+        else:
+            info=yellow(f'{stat}/{spec}')
+        op += f"{type}{i.metadata.namespace:12s} {i.metadata.name:42s} {info}\n"
+    return op
+        
 def print_replica_sets(namespace='all'): print(sprint_replica_sets(namespace))
 
 def sprint_replica_sets(namespace='all'):
@@ -386,6 +408,11 @@ def test_methods():
     print_replica_sets()
     print("\n---- [namespace='default'] Listing replica_sets:")
     print_replica_sets(namespace='default')
+    
+    print("\n======== [all namespaces] Listing stateful_sets:")
+    print_stateful_sets()
+    print("\n---- [namespace='default'] Listing stateful_sets:")
+    print_stateful_sets(namespace='default')
     
     print("\n======== [all namespaces] Listing services:")
     print_services()
@@ -493,6 +520,7 @@ while True:
         if resource.find("dep") == 0:     op+='\n'+sprint_deployments(namespace)
         #if resource.find("deploy") == 0:     op+='\n'+sprint_deployments(namespace)
         if resource.find("rs") == 0:         op+='\n'+sprint_replica_sets(namespace)
+        if resource.find("ss") == 0:         op+='\n'+sprint_stateful_sets(namespace)
         if resource.find("replicaset") == 0: op+='\n'+sprint_replica_sets(namespace)
         if resource.find("po") == 0:         op+='\n'+sprint_pods(namespace)
      
