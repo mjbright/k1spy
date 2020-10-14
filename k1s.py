@@ -80,6 +80,9 @@ def bold_white(msg):    return f"{BOLD_WHITE}{msg}{RESET}"
 
 #= END OF === COLOUR DEFINITIONS ==============================
 
+def die(msg):
+    print(f"die: {msg}")
+    sys.exit(1)
 
 def sprint_nodes():
     #global nodes
@@ -222,8 +225,7 @@ def sprint_pods(namespace='all'):
         if hasattr(i.metadata,'deletion_timestamp'):
             #print( i.metadata )
             #print("GOT IT")
-            #print( i.metadata.deletion_timestamp )
-            #sys.exit(1)
+            #die( i.metadata.deletion_timestamp )
             if i.metadata.deletion_timestamp: info = "Terminating"
             #if i.metadata.deletionTimestamp != null: info == "Terminating"
 
@@ -569,6 +571,9 @@ while True:
         if resource.find("po") == 0:         op+='\n'+sprint_pods(namespace)
         # LATER: if resource.find("pvc") == 0:        op+='\n'+sprint_pvcs(namespace)
         # LATER: if resource.find("pv") == 0:         op+='\n'+sprint_pvs(namespace)
+
+        if not match:
+            die(f"No match for resource type '{resource}'")
      
     if op != last_op:
         cls()
