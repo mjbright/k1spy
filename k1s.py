@@ -198,7 +198,10 @@ def sprint_pods(namespace='all'):
                 container0 = status['container_statuses'][0] # !!
                 info=container0['state']['terminated']['reason']
             except:
-                info='NonReady'
+                try:
+                    info=container0['state']['waiting']['reason']
+                except:
+                    info='NonReady'
 
         else:
             info=phase
