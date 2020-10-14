@@ -202,11 +202,12 @@ def sprint_pods(namespace='all'):
 
         else:
             info=phase
+
         if info == "Running": info=green("Running")
         if info == "Complete": info=yellow("Running")
 
         if hasattr(i.metadata,'deletion_timestamp'):
-            if i.metadata.deletion_timestamp: info = "Terminating"
+            if i.metadata.deletion_timestamp: info = red("Terminating")
 
         AGE, AGE_HMS = get_age(i)
 
