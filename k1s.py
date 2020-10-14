@@ -195,14 +195,15 @@ def sprint_pods(namespace='all'):
         info=''
         if is_scheduled and (not is_ready):
             try:
-                container0 = status.container_statuses[0] # !!
-                info=container0.state.terminated.reason
+                container0 = status['container_statuses'][0] # !!
+                info=container0['state']['terminated']['reason']
             except:
                 info='NonReady'
 
         else:
             info=phase
         if info == "Running": info=green("Running")
+        if info == "Complete": info=yellow("Running")
 
         if hasattr(i.metadata,'deletion_timestamp'):
             if i.metadata.deletion_timestamp: info = "Terminating"
