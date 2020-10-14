@@ -5,7 +5,7 @@ SHOW_TYPES=True
 VERBOSE=False
 
 # Remember to make sure ~/.kube/config is pointing to a valid cluster or kubernetes import will timeout ... after quite a while ...
-        
+
 #import datetime;
 #now = datetime.datetime.now(); print(now)
 #from pprint import pprint
@@ -92,16 +92,42 @@ def sprint_nodes():
 
     ret = corev1.list_node(watch=False)
     if len(ret.items) == 0: return ''
-    retstr = "\n"
 
+    op_lines=[]; ages={}; idx=0
     for i in ret.items:
         node_ip   = i.status.addresses[0].address
         node_name = i.metadata.name
-        AGE = get_age(i)
-        #retstr += f"{type}{i.metadata.name:12s} { green( node_ip ) :16s} {AGE}\n"
-        retstr += f"{type}{i.metadata.name:12s} { green( node_ip ) :16s}\n"
-        #info=$(c 32)$(jq -r '.object.status.addresses[0].address' <<<"$event")$(c 0);;
-        #nodes[node_ip] = node_name
+        AGE, AGE_HMS = get_age(i)
+        #retstr += f"{type}{i.metadata.name:12s} { green( node_ip ) :16s} {AGE_HMS}\n"
+        LINE=f"{type}{i.metadata.name:12s} { green( node_ip ) :24s} {AGE_HMS}\n"
+        op_lines.append({'age': AGE, 'line': LINE})
+        #ages[idx]=AGE; idx+=1
+
+    return sort_lines_by_age(op_lines, ages)
+
+def sort_lines_by_age(op_lines, ages):
+    #order = sorted(ages, key=lambda x: ages(x), reverse=True)
+    sorted_op_lines = sorted(op_lines, key=lambda x: x['age'], reverse=True)
+    #sorted_op_lines = sorted(op_lines, key=lambda x: x['age'], reverse=False)
+    #print(order)
+    retstr = "\n"
+    for line in sorted_op_lines:
+        retstr += line['line']
+    return retstr
+
+def old_sort_lines_by_age(op_lines, ages):
+    #order=sorted(ages.keys())
+    order=sorted(ages.values())
+
+    retstr = "\n"
+    print(order)
+    print(type(order))
+    #for o in order:
+    for idx in ages:
+        #idx=ages[o]
+        #retstr+=op_lines[o]
+        retstr+=op_lines[idx]
+
     return retstr
 
 def print_nodes(): print(sprint_nodes())
@@ -115,7 +141,7 @@ def get_nodes():
         node_name = i.metadata.name
         nodes[node_ip] = node_name
     return nodes
-        
+
 #LATER: requires new fields
 #def print_pvs(namespace='all'):  print(sprint_pvs(namespace))
 #def sprint_pvcs(namespace):
@@ -160,7 +186,7 @@ def get_age(i):
     except:
         AGE=0
 
-    return setHMS(AGE)
+    return AGE, setHMS(AGE)
 
 
 def sprint_pods(namespace='all'):
@@ -171,8 +197,8 @@ def sprint_pods(namespace='all'):
     else:
         ret = corev1.list_namespaced_pod(watch=False, namespace=namespace)
     if len(ret.items) == 0: return ''
-    retstr = "\n"
 
+    op_lines=[]; ages={}; idx=0
     for i in ret.items:
         pod_name      = i.metadata.name
         pod_namespace = i.metadata.namespace
@@ -232,7 +258,7 @@ def sprint_pods(namespace='all'):
             if i.metadata.deletion_timestamp: info = "Terminating"
             #if i.metadata.deletionTimestamp != null: info == "Terminating"
 
-        AGE = get_age(i)
+        AGE, AGE_HMS = get_age(i)
 
         if VERBOSE: # Checking for unset vars
             print(f"namespace={i.metadata.namespace:12s}")
@@ -240,14 +266,14 @@ def sprint_pods(namespace='all'):
             print(f"info={info}")
             print(f"pod_ip/host={pod_ip:15s}/{host}\n")
             print(f"creation_time={creation_time}")
-            print(f"AGE={AGE}\n")
+            print(f"AGE={AGE_HMS}\n")
 
 
-        retstr += f"{i.metadata.namespace:12s} {type}{i.metadata.name:32s} {info} {pod_ip:15s}/{host} {AGE}\n"
-    return retstr
+        LINE = f"{i.metadata.namespace:12s} {type}{i.metadata.name:32s} {info} {pod_ip:15s}/{host:10s} {AGE_HMS}\n"
+        op_lines.append({'age': AGE, 'line': LINE})
+        #op_lines.append(LINE); ages[idx]=AGE; idx+=1
 
-
-
+    return sort_lines_by_age(op_lines, ages)
 
 def print_deployments(namespace='all'): print(sprint_deployments(namespace))
 
@@ -259,8 +285,8 @@ def sprint_deployments(namespace='all'):
     else:
         ret = appsv1.list_namespaced_deployment(watch=False, namespace=namespace)
     if len(ret.items) == 0: return ''
-    retstr = "\n"
 
+    op_lines=[]; ages={}; idx=0
     for i in ret.items:
         #print(f"{i.metadata.namespace:12s} {i.metadata.name:42s}")
         spec=i.spec.replicas
@@ -269,10 +295,13 @@ def sprint_deployments(namespace='all'):
             info=green(f'{stat}/{spec}')
         else:
             info=yellow(f'{stat}/{spec}')
-        retstr += f"{type}{i.metadata.namespace:12s} {i.metadata.name:42s} {info}\n"
+        AGE, AGE_HMS = get_age(i)
+        LINE = f"{type}{i.metadata.namespace:12s} {i.metadata.name:42s} {info} {AGE_HMS}\n"
+        op_lines.append({'age': AGE, 'line': LINE})
+        #op_lines.append(LINE); ages[idx]=AGE; idx+=1
         #retstr += f"{type}{i.metadata.namespace:12s} {i.metadata.name:42s}\n"
-    return retstr
-        
+
+    return sort_lines_by_age(op_lines, ages)
 
 def print_daemon_sets(namespace='all'): print(sprint_daemon_sets(namespace))
 
@@ -284,13 +313,17 @@ def sprint_daemon_sets(namespace='all'):
     else:
         ret = appsv1.list_namespaced_daemon_set(watch=False, namespace=namespace)
     if len(ret.items) == 0: return ''
-    retstr = "\n"
 
+    op_lines=[]; ages={}; idx=0
     for i in ret.items:
         #print(f"{i.metadata.namespace:12s} {i.metadata.name:42s}")
-        retstr += f"{type}{i.metadata.namespace:12s} {i.metadata.name:42s}\n"
-    return retstr
-        
+        AGE, AGE_HMS = get_age(i)
+        LINE = f"{type}{i.metadata.namespace:12s} {i.metadata.name:42s}\n"
+        op_lines.append({'age': AGE, 'line': LINE})
+        #op_lines.append(LINE); ages[idx]=AGE; idx+=1
+
+    return sort_lines_by_age(op_lines, ages)
+
 def print_stateful_sets(namespace='all'): print(sprint_stateful_sets(namespace))
 
 def sprint_stateful_sets(namespace='all'):
@@ -301,8 +334,8 @@ def sprint_stateful_sets(namespace='all'):
     else:
         ret = appsv1.list_namespaced_stateful_set(watch=False, namespace=namespace)
     if len(ret.items) == 0: return ''
-    retstr = "\n"
 
+    op_lines=[]; ages={}; idx=0
     for i in ret.items:
         #print(f"{i.metadata.namespace:12s} {i.metadata.name:42s}")
         spec=i.spec.replicas
@@ -311,11 +344,13 @@ def sprint_stateful_sets(namespace='all'):
             info=green(f'{stat}/{spec}')
         else:
             info=yellow(f'{stat}/{spec}')
-        AGE = get_age(i)
-        retstr += f"{type}{i.metadata.namespace:12s} {i.metadata.name:42s} {info} {AGE}\n"
+        AGE, AGE_HMS = get_age(i)
+        LINE = f"{type}{i.metadata.namespace:12s} {i.metadata.name:42s} {info} {AGE_HMS}\n"
+        op_lines.append({'age': AGE, 'line': LINE})
+        #op_lines.append(LINE); ages[idx]=AGE; idx+=1
         #retstr += f"{type}{i.metadata.namespace:12s} {i.metadata.name:42s}\n"
-    return retstr
-        
+
+    return sort_lines_by_age(op_lines, ages)
 
 def print_replica_sets(namespace='all'): print(sprint_stateful_sets(namespace))
 
@@ -327,8 +362,8 @@ def sprint_replica_sets(namespace='all'):
     else:
         ret = appsv1.list_namespaced_replica_set(watch=False, namespace=namespace)
     if len(ret.items) == 0: return ''
-    retstr = "\n"
 
+    op_lines=[]; ages={}; idx=0
     for i in ret.items:
         #print(f"{i.metadata.namespace:12s} {i.metadata.name:42s}")
         #stat=0 #print(i.status) #sys.exit(0) #if 'readyReplicas' in i.status: stat=i.status.readyReplicas
@@ -339,10 +374,13 @@ def sprint_replica_sets(namespace='all'):
         else:
             info=yellow(f'{stat}/{spec}')
 
-        AGE = get_age(i)
-        retstr += f"{type}{i.metadata.namespace:12s} {i.metadata.name:42s} {info} {AGE}\n"
-    return retstr
-        
+        AGE, AGE_HMS = get_age(i)
+        LINE = f"{type}{i.metadata.namespace:12s} {i.metadata.name:42s} {info:12s} {AGE_HMS}\n"
+        op_lines.append({'age': AGE, 'line': LINE})
+        #op_lines.append(LINE); ages[idx]=AGE; idx+=1
+
+    return sort_lines_by_age(op_lines, ages)
+
 def print_replica_sets(namespace='all'): print(sprint_replica_sets(namespace))
 
 def sprint_replica_sets(namespace='all'):
@@ -353,8 +391,8 @@ def sprint_replica_sets(namespace='all'):
     else:
         ret = appsv1.list_namespaced_replica_set(watch=False, namespace=namespace)
     if len(ret.items) == 0: return ''
-    retstr = "\n"
 
+    op_lines=[]; ages={}; idx=0
     for i in ret.items:
         #print(f"{i.metadata.namespace:12s} {i.metadata.name:42s}")
         #stat=0 #print(i.status) #sys.exit(0) #if 'readyReplicas' in i.status: stat=i.status.readyReplicas
@@ -364,10 +402,12 @@ def sprint_replica_sets(namespace='all'):
             info=green(f'{stat}/{spec}')
         else:
             info=yellow(f'{stat}/{spec}')
-        AGE = get_age(i)
-        retstr += f"{type}{i.metadata.namespace:12s} {i.metadata.name:42s} {info} {AGE}\n"
-    return retstr
-        
+        AGE, AGE_HMS = get_age(i)
+        LINE = f"{type}{i.metadata.namespace:12s} {i.metadata.name:42s} {info} {AGE_HMS}\n"
+        op_lines.append({'age': AGE, 'line': LINE})
+        #op_lines.append(LINE); ages[idx]=AGE; idx+=1
+
+    return sort_lines_by_age(op_lines, ages)
 
 def print_services(namespace='all'): print(sprint_services(namespace))
 
@@ -379,11 +419,10 @@ def sprint_services(namespace='all'):
     else:
         ret = corev1.list_namespaced_service(watch=False, namespace=namespace)
     if len(ret.items) == 0: return ''
-    retstr = "\n"
 
+    op_lines=[]; ages={}; idx=0
     for i in ret.items:
         #print(f"{i.metadata.namespace:12s} {i.metadata.name:42s}")
-        AGE = get_age(i)
         NPORT=""
         spec = i.spec.to_dict()
         #{'cluster_ip': '10.109.121.252', 'external_i_ps': None, 'external_name': None, 'external_traffic_policy': None, 'health_check_node_port': None, 'load_balancer_ip': None, 'load_balancer_source_ranges': None, 'ports': [{'name': None, 'node_port': None, 'port': 80, 'protocol': 'TCP', 'target_port': 80}], 'publish_not_ready_addresses': None, 'selector': {'app': 'ckad-demo-green'}, 'session_affinity': 'None', 'session_affinity_config': None, 'type': 'ClusterIP'}
@@ -394,16 +433,18 @@ def sprint_services(namespace='all'):
         if 'ports' in spec and 'node_port' in spec['ports'][0]:
             port0=spec['ports'][0]
             NPORT=f" NodePort:{port0['port']}:{port0['node_port']}"
-        
+
         CIP=spec['cluster_ip']
         #POLICY=f"external_traffic_policy={spec['external_traffic_policy']}"
         #POLICY=spec['external_traffic_policy']
         #if not POLICY: POLICY=" "
         POLICY=""
-        retstr += f"{type}{i.metadata.namespace:12s} {i.metadata.name:42s} {CIP:15s}{NPORT:12s}{POLICY:8s} {AGE}\n"
+        AGE, AGE_HMS = get_age(i)
+        LINE = f"{type}{i.metadata.namespace:12s} {i.metadata.name:42s} {CIP:15s}{NPORT:12s}{POLICY:8s} {AGE_HMS}\n"
+        op_lines.append({'age': AGE, 'line': LINE})
+        #op_lines.append(LINE); ages[idx]=AGE; idx+=1
 
-
-    return retstr
+    return sort_lines_by_age(op_lines, ages)
 
 def print_jobs(namespace='all'): print(sprint_jobs(namespace))
 
@@ -415,14 +456,16 @@ def sprint_jobs(namespace='all'):
     else:
         ret = batchv1.list_namespaced_job(watch=False, namespace=namespace)
     if len(ret.items) == 0: return ''
-    retstr = "\n"
 
+    op_lines=[]; ages={}; idx=0
     for i in ret.items:
         #print(f"{i.metadata.namespace:12s} {i.metadata.name:42s}")
-        AGE = get_age(i)
-        retstr += f"{type}{i.metadata.namespace:12s} {i.metadata.name:42s} {AGE}\n"
-    return retstr
+        AGE, AGE_HMS = get_age(i)
+        LINE = f"{type}{i.metadata.namespace:12s} {i.metadata.name:42s} {AGE_HMS}\n"
+        op_lines.append({'age': AGE, 'line': LINE})
+        #op_lines.append(LINE); ages[idx]=AGE; idx+=1
 
+    return sort_lines_by_age(op_lines, ages)
 
 def print_cron_jobs(namespace='all'): print(sprint_cron_jobs(namespace))
 
@@ -434,61 +477,64 @@ def sprint_cron_jobs(namespace='all'):
     else:
         ret = batchv1beta1.list_namespaced_cron_job(watch=False, namespace=namespace)
     if len(ret.items) == 0: return ''
-    retstr = "\n"
 
+    op_lines=[]; ages={}; idx=0
     for i in ret.items:
         #print(f"{i.metadata.namespace:12s} {i.metadata.name:42s}")
-        AGE = get_age(i)
-        retstr += f"{type}{i.metadata.namespace:12s} {i.metadata.name:42s} {AGE}\n"
-    return retstr
-        
+        AGE, AGE_HMS = get_age(i)
+        LINE = f"{type}{i.metadata.namespace:12s} {i.metadata.name:42s} {AGE_HMS}\n"
+        op_lines.append({'age': AGE, 'line': LINE})
+        #op_lines.append(LINE); ages[idx]=AGE; idx+=1
+
+    return sort_lines_by_age(op_lines, ages)
+
 def test_methods():
     global nodes
     nodes = get_nodes()
 
     print("\n======== Listing nodes with their IPs:")
     print_nodes()
-    
+
     print("\n======== [all namespaces] Listing pods with their IPs:")
     print_pods()
     print("\n---- [namespace='default'] Listing pods with their IPs:")
     print_pods(namespace='default')
-    
+
     print("\n======== [all namespaces] Listing deployments:")
     print_deployments()
     print("\n---- [namespace='default'] Listing deployments:")
     print_deployments(namespace='default')
-    
+
     print("\n======== [all namespaces] Listing daemon_sets:")
     print_daemon_sets()
     print("\n---- [namespace='default'] Listing daemon_sets:")
     print_daemon_sets(namespace='default')
-    
+
     print("\n======== [all namespaces] Listing stateful_sets:")
     print_stateful_sets()
     print("\n---- [namespace='default'] Listing stateful_sets:")
     print_stateful_sets(namespace='default')
-    
+
     print("\n======== [all namespaces] Listing replica_sets:")
     print_replica_sets()
     print("\n---- [namespace='default'] Listing replica_sets:")
     print_replica_sets(namespace='default')
-    
+
     print("\n======== [all namespaces] Listing stateful_sets:")
     print_stateful_sets()
     print("\n---- [namespace='default'] Listing stateful_sets:")
     print_stateful_sets(namespace='default')
-    
+
     print("\n======== [all namespaces] Listing services:")
     print_services()
     print("\n---- [namespace='default'] Listing services:")
     print_services(namespace='default')
-    
+
     print("\n======== [all namespaces] Listing jobs:")
     print_jobs()
     print("\n---- [namespace='default'] Listing jobs:")
     print_jobs(namespace='default')
-    
+
     print("\n======== [all namespaces] Listing cron_jobs:")
     print_cron_jobs()
     print("\n---- [namespace='default'] Listing cron_jobs:")
@@ -626,7 +672,7 @@ while True:
 
         if not match:
             die(f"No match for resource type '{resource}'")
-     
+
     if op != last_op:
         cls()
         print(op)
