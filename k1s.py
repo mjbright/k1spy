@@ -91,7 +91,9 @@ def sprint_nodes():
     type =  'node/' if SHOW_TYPES else ''
 
     ret = corev1.list_node(watch=False)
-    retstr = ""
+    if len(ret.items) == 0: return ''
+    retstr = "\n"
+
     for i in ret.items:
         node_ip   = i.status.addresses[0].address
         node_name = i.metadata.name
@@ -162,13 +164,14 @@ def get_age(i):
 
 
 def sprint_pods(namespace='all'):
-    op=''
     type =  'pod/' if SHOW_TYPES else ''
 
     if namespace == 'all':
         ret = corev1.list_pod_for_all_namespaces(watch=False)
     else:
         ret = corev1.list_namespaced_pod(watch=False, namespace=namespace)
+    if len(ret.items) == 0: return ''
+    retstr = "\n"
 
     for i in ret.items:
         pod_name      = i.metadata.name
@@ -240,8 +243,8 @@ def sprint_pods(namespace='all'):
             print(f"AGE={AGE}\n")
 
 
-        op += f"{i.metadata.namespace:12s} {type}{i.metadata.name:32s} {info} {pod_ip:15s}/{host} {AGE}\n"
-    return op
+        retstr += f"{i.metadata.namespace:12s} {type}{i.metadata.name:32s} {info} {pod_ip:15s}/{host} {AGE}\n"
+    return retstr
 
 
 
@@ -249,13 +252,15 @@ def sprint_pods(namespace='all'):
 def print_deployments(namespace='all'): print(sprint_deployments(namespace))
 
 def sprint_deployments(namespace='all'):
-    op=''
     type =  'deploy/' if SHOW_TYPES else ''
 
     if namespace == 'all':
         ret = appsv1.list_deployment_for_all_namespaces(watch=False)
     else:
         ret = appsv1.list_namespaced_deployment(watch=False, namespace=namespace)
+    if len(ret.items) == 0: return ''
+    retstr = "\n"
+
     for i in ret.items:
         #print(f"{i.metadata.namespace:12s} {i.metadata.name:42s}")
         spec=i.spec.replicas
@@ -264,36 +269,40 @@ def sprint_deployments(namespace='all'):
             info=green(f'{stat}/{spec}')
         else:
             info=yellow(f'{stat}/{spec}')
-        op += f"{type}{i.metadata.namespace:12s} {i.metadata.name:42s} {info}\n"
-        #op += f"{type}{i.metadata.namespace:12s} {i.metadata.name:42s}\n"
-    return op
+        retstr += f"{type}{i.metadata.namespace:12s} {i.metadata.name:42s} {info}\n"
+        #retstr += f"{type}{i.metadata.namespace:12s} {i.metadata.name:42s}\n"
+    return retstr
         
 
 def print_daemon_sets(namespace='all'): print(sprint_daemon_sets(namespace))
 
 def sprint_daemon_sets(namespace='all'):
-    op=''
     type =  'ds/' if SHOW_TYPES else ''
 
     if namespace == 'all':
         ret = appsv1.list_daemon_set_for_all_namespaces(watch=False)
     else:
         ret = appsv1.list_namespaced_daemon_set(watch=False, namespace=namespace)
+    if len(ret.items) == 0: return ''
+    retstr = "\n"
+
     for i in ret.items:
         #print(f"{i.metadata.namespace:12s} {i.metadata.name:42s}")
-        op += f"{type}{i.metadata.namespace:12s} {i.metadata.name:42s}\n"
-    return op
+        retstr += f"{type}{i.metadata.namespace:12s} {i.metadata.name:42s}\n"
+    return retstr
         
 def print_stateful_sets(namespace='all'): print(sprint_stateful_sets(namespace))
 
 def sprint_stateful_sets(namespace='all'):
-    op=''
     type =  'ss/' if SHOW_TYPES else ''
 
     if namespace == 'all':
         ret = appsv1.list_stateful_set_for_all_namespaces(watch=False)
     else:
         ret = appsv1.list_namespaced_stateful_set(watch=False, namespace=namespace)
+    if len(ret.items) == 0: return ''
+    retstr = "\n"
+
     for i in ret.items:
         #print(f"{i.metadata.namespace:12s} {i.metadata.name:42s}")
         spec=i.spec.replicas
@@ -303,21 +312,23 @@ def sprint_stateful_sets(namespace='all'):
         else:
             info=yellow(f'{stat}/{spec}')
         AGE = get_age(i)
-        op += f"{type}{i.metadata.namespace:12s} {i.metadata.name:42s} {info} {AGE}\n"
-        #op += f"{type}{i.metadata.namespace:12s} {i.metadata.name:42s}\n"
-    return op
+        retstr += f"{type}{i.metadata.namespace:12s} {i.metadata.name:42s} {info} {AGE}\n"
+        #retstr += f"{type}{i.metadata.namespace:12s} {i.metadata.name:42s}\n"
+    return retstr
         
 
 def print_replica_sets(namespace='all'): print(sprint_stateful_sets(namespace))
 
 def sprint_replica_sets(namespace='all'):
-    op=''
     type =  'rs/' if SHOW_TYPES else ''
 
     if namespace == 'all':
         ret = appsv1.list_replica_set_for_all_namespaces(watch=False)
     else:
         ret = appsv1.list_namespaced_replica_set(watch=False, namespace=namespace)
+    if len(ret.items) == 0: return ''
+    retstr = "\n"
+
     for i in ret.items:
         #print(f"{i.metadata.namespace:12s} {i.metadata.name:42s}")
         #stat=0 #print(i.status) #sys.exit(0) #if 'readyReplicas' in i.status: stat=i.status.readyReplicas
@@ -329,19 +340,21 @@ def sprint_replica_sets(namespace='all'):
             info=yellow(f'{stat}/{spec}')
 
         AGE = get_age(i)
-        op += f"{type}{i.metadata.namespace:12s} {i.metadata.name:42s} {info} {AGE}\n"
-    return op
+        retstr += f"{type}{i.metadata.namespace:12s} {i.metadata.name:42s} {info} {AGE}\n"
+    return retstr
         
 def print_replica_sets(namespace='all'): print(sprint_replica_sets(namespace))
 
 def sprint_replica_sets(namespace='all'):
-    op=''
     type =  'rs/' if SHOW_TYPES else ''
 
     if namespace == 'all':
         ret = appsv1.list_replica_set_for_all_namespaces(watch=False)
     else:
         ret = appsv1.list_namespaced_replica_set(watch=False, namespace=namespace)
+    if len(ret.items) == 0: return ''
+    retstr = "\n"
+
     for i in ret.items:
         #print(f"{i.metadata.namespace:12s} {i.metadata.name:42s}")
         #stat=0 #print(i.status) #sys.exit(0) #if 'readyReplicas' in i.status: stat=i.status.readyReplicas
@@ -352,20 +365,22 @@ def sprint_replica_sets(namespace='all'):
         else:
             info=yellow(f'{stat}/{spec}')
         AGE = get_age(i)
-        op += f"{type}{i.metadata.namespace:12s} {i.metadata.name:42s} {info} {AGE}\n"
-    return op
+        retstr += f"{type}{i.metadata.namespace:12s} {i.metadata.name:42s} {info} {AGE}\n"
+    return retstr
         
 
 def print_services(namespace='all'): print(sprint_services(namespace))
 
 def sprint_services(namespace='all'):
-    op=''
     type =  'svc/' if SHOW_TYPES else ''
 
     if namespace == 'all':
         ret = corev1.list_service_for_all_namespaces(watch=False)
     else:
         ret = corev1.list_namespaced_service(watch=False, namespace=namespace)
+    if len(ret.items) == 0: return ''
+    retstr = "\n"
+
     for i in ret.items:
         #print(f"{i.metadata.namespace:12s} {i.metadata.name:42s}")
         AGE = get_age(i)
@@ -385,43 +400,47 @@ def sprint_services(namespace='all'):
         #POLICY=spec['external_traffic_policy']
         #if not POLICY: POLICY=" "
         POLICY=""
-        op += f"{type}{i.metadata.namespace:12s} {i.metadata.name:42s} {CIP:15s}{NPORT:12s}{POLICY:8s} {AGE}\n"
+        retstr += f"{type}{i.metadata.namespace:12s} {i.metadata.name:42s} {CIP:15s}{NPORT:12s}{POLICY:8s} {AGE}\n"
 
 
-    return op
+    return retstr
 
 def print_jobs(namespace='all'): print(sprint_jobs(namespace))
 
 def sprint_jobs(namespace='all'):
-    op=''
     type =  'job/' if SHOW_TYPES else ''
 
     if namespace == 'all':
         ret = batchv1.list_job_for_all_namespaces(watch=False)
     else:
         ret = batchv1.list_namespaced_job(watch=False, namespace=namespace)
+    if len(ret.items) == 0: return ''
+    retstr = "\n"
+
     for i in ret.items:
         #print(f"{i.metadata.namespace:12s} {i.metadata.name:42s}")
         AGE = get_age(i)
-        op += f"{type}{i.metadata.namespace:12s} {i.metadata.name:42s} {AGE}\n"
-    return op
+        retstr += f"{type}{i.metadata.namespace:12s} {i.metadata.name:42s} {AGE}\n"
+    return retstr
 
 
 def print_cron_jobs(namespace='all'): print(sprint_cron_jobs(namespace))
 
 def sprint_cron_jobs(namespace='all'):
-    op=''
     type =  'cronjob/' if SHOW_TYPES else ''
 
     if namespace == 'all':
         ret = batchv1beta1.list_cron_job_for_all_namespaces(watch=False)
     else:
         ret = batchv1beta1.list_namespaced_cron_job(watch=False, namespace=namespace)
+    if len(ret.items) == 0: return ''
+    retstr = "\n"
+
     for i in ret.items:
         #print(f"{i.metadata.namespace:12s} {i.metadata.name:42s}")
         AGE = get_age(i)
-        op += f"{type}{i.metadata.namespace:12s} {i.metadata.name:42s} {AGE}\n"
-    return op
+        retstr += f"{type}{i.metadata.namespace:12s} {i.metadata.name:42s} {AGE}\n"
+    return retstr
         
 def test_methods():
     global nodes
@@ -561,43 +580,49 @@ while True:
     for resource in resources:
         #op += '\n'
         match=False
+        #if resource.find("ALL") == 0:
+            #op+=sprint_nodes()
+
         if resource.find("no") == 0:
             match=True
-            op+='\n'+sprint_nodes()
+            op+=sprint_nodes()
 
-        if resource.find("svc") == 0:
+        if resource.find("all") == 0:
             match=True
-            op+='\n'+sprint_services(namespace)
-        if resource.find("service") == 0:
+            op+=sprint_services(namespace)
+            op+=sprint_deployments(namespace)
+            op+=sprint_replica_sets(namespace)
+            op+=sprint_stateful_sets(namespace)
+            op+=sprint_pods(namespace)
+            op+=sprint_jobs(namespace)
+            op+=sprint_cron_jobs(namespace)
+
+        if resource.find("svc") == 0 or resource.find("service") == 0:
             match=True
-            op+='\n'+sprint_services(namespace)
+            op+=sprint_services(namespace)
 
         if resource.find("dep") == 0:
             match=True
-            op+='\n'+sprint_deployments(namespace)
-        if resource.find("rs") == 0:
+            op+=sprint_deployments(namespace)
+        if resource.find("rs") == 0 or resource.find("replicaset") == 0:
             match=True
-            op+='\n'+sprint_replica_sets(namespace)
+            op+=sprint_replica_sets(namespace)
         if resource.find("ss") == 0 or resource.find("sts") == 0:
             match=True
-            op+='\n'+sprint_stateful_sets(namespace)
-
-        if resource.find("replicaset") == 0:
-            match=True
-            op+='\n'+sprint_replica_sets(namespace)
+            op+=sprint_stateful_sets(namespace)
 
         if resource.find("po") == 0:
             match=True
-            op+='\n'+sprint_pods(namespace)
+            op+=sprint_pods(namespace)
 
-        if resource.find("cj") == 0:
+        if resource.find("job") == 0:
             match=True
-            op+='\n'+sprint_cron_jobs(namespace)
-        if resource.find("cron") == 0:
+            op+=sprint_jobs(namespace)
+        if resource.find("cj") == 0 or resource.find("cron") == 0:
             match=True
-            op+='\n'+sprint_cron_jobs(namespace)
-        # LATER: if resource.find("pvc") == 0:        op+='\n'+sprint_pvcs(namespace)
-        # LATER: if resource.find("pv") == 0:         op+='\n'+sprint_pvs(namespace)
+            op+=sprint_cron_jobs(namespace)
+        # LATER: if resource.find("pvc") == 0:        op+=sprint_pvcs(namespace)
+        # LATER: if resource.find("pv") == 0:         op+=sprint_pvs(namespace)
 
         if not match:
             die(f"No match for resource type '{resource}'")
