@@ -4,19 +4,19 @@ SHOW_TYPES=True
 
 VERBOSE=False
 
-# Remember to make sure ~/.kube/config is pointing to a valid cluster or kubernetes import will timeout ... after quite a while ...
-
-#import datetime;
-#now = datetime.datetime.now(); print(now)
-#from pprint import pprint
+#LATER: requires new fields
+#def print_pvs(namespace='all'):  print(sprint_pvs(namespace))
+#def sprint_pvcs(namespace):
+#def print_pvcs(namespace='all'): print(sprint_pvcs(namespace))
+#def sprint_pvs(namespace):
 
 import sys, time
 from kubernetes import client, config
-#now = datetime.datetime.now(); print(now)
 
 # For timestamp handling:
 from datetime import datetime
 
+# Make sure ~/.kube/config is pointing to a valid cluster or kubernetes import will timeout ... after quite a while ...
 config.load_kube_config()
 #config.load_incluster_config()
 
@@ -25,13 +25,6 @@ corev1 = client.CoreV1Api()
 appsv1 = client.AppsV1Api()
 batchv1 = client.BatchV1Api()
 batchv1beta1 = client.BatchV1beta1Api()
-
-# To see available APIs:
-#print( dir(client) )
-# Search for methods on APIs:
-#    match="list_pod"
-#    methods = [ method for method in dir(v1) if match in method]
-#    print("\n".join( methods ))
 
 #============ COLOUR DEFINITIONS ==============================
 
@@ -84,71 +77,12 @@ def die(msg):
     print(f"die: {msg}")
     sys.exit(1)
 
-def sprint_nodes():
-    #global nodes
-    #nodes = {}
-
-    type =  'node/' if SHOW_TYPES else ''
-
-    ret = corev1.list_node(watch=False)
-    if len(ret.items) == 0: return ''
-
-    op_lines=[]; ages={}; idx=0
-    for i in ret.items:
-        node_ip   = i.status.addresses[0].address
-        node_name = i.metadata.name
-        AGE, AGE_HMS = get_age(i)
-        #retstr += f"{type}{i.metadata.name:12s} { green( node_ip ) :16s} {AGE_HMS}\n"
-        LINE=f"{type}{i.metadata.name:12s} { green( node_ip ) :24s} {AGE_HMS}\n"
-        op_lines.append({'age': AGE, 'line': LINE})
-        #ages[idx]=AGE; idx+=1
-
-    return sort_lines_by_age(op_lines, ages)
-
 def sort_lines_by_age(op_lines, ages):
-    #order = sorted(ages, key=lambda x: ages(x), reverse=True)
     sorted_op_lines = sorted(op_lines, key=lambda x: x['age'], reverse=True)
-    #sorted_op_lines = sorted(op_lines, key=lambda x: x['age'], reverse=False)
-    #print(order)
     retstr = "\n"
     for line in sorted_op_lines:
         retstr += line['line']
     return retstr
-
-def old_sort_lines_by_age(op_lines, ages):
-    #order=sorted(ages.keys())
-    order=sorted(ages.values())
-
-    retstr = "\n"
-    print(order)
-    print(type(order))
-    #for o in order:
-    for idx in ages:
-        #idx=ages[o]
-        #retstr+=op_lines[o]
-        retstr+=op_lines[idx]
-
-    return retstr
-
-def print_nodes(): print(sprint_nodes())
-
-def get_nodes():
-    nodes = {}
-
-    ret = corev1.list_node(watch=False)
-    for i in ret.items:
-        node_ip   = i.status.addresses[0].address
-        node_name = i.metadata.name
-        nodes[node_ip] = node_name
-    return nodes
-
-#LATER: requires new fields
-#def print_pvs(namespace='all'):  print(sprint_pvs(namespace))
-#def sprint_pvcs(namespace):
-#def print_pvcs(namespace='all'): print(sprint_pvcs(namespace))
-#def sprint_pvs(namespace):
-
-def print_pods(namespace='all'): print(sprint_pods(namespace))
 
 def setHMS(AGEsecs):
     OP=""
@@ -188,6 +122,35 @@ def get_age(i):
 
     return AGE, setHMS(AGE)
 
+def print_nodes(): print(sprint_nodes())
+
+def sprint_nodes():
+    type =  'node/' if SHOW_TYPES else ''
+
+    ret = corev1.list_node(watch=False)
+    if len(ret.items) == 0: return ''
+
+    op_lines=[]; ages={}; idx=0
+    for i in ret.items:
+        node_ip   = i.status.addresses[0].address
+        node_name = i.metadata.name
+        AGE, AGE_HMS = get_age(i)
+        LINE=f"{type}{i.metadata.name:12s} { green( node_ip ) :24s} {AGE_HMS}\n"
+        op_lines.append({'age': AGE, 'line': LINE})
+
+    return sort_lines_by_age(op_lines, ages)
+
+def get_nodes():
+    nodes = {}
+
+    ret = corev1.list_node(watch=False)
+    for i in ret.items:
+        node_ip   = i.status.addresses[0].address
+        node_name = i.metadata.name
+        nodes[node_ip] = node_name
+    return nodes
+
+def print_pods(namespace='all'): print(sprint_pods(namespace))
 
 def sprint_pods(namespace='all'):
     type =  'pod/' if SHOW_TYPES else ''
@@ -214,7 +177,6 @@ def sprint_pods(namespace='all'):
             if   "ma" in host: host=cyan(host)
             elif "wo" in host: host=magenta(host)
             else:              pass
-        #print(f"{i.metadata.namespace:12s} {i.metadata.name:42s} {i.status.pod_ip:16s} {i.status.host_ip:16s}")
 
         phase=i.status.phase
         is_ready=False
@@ -229,34 +191,21 @@ def sprint_pods(namespace='all'):
                         cstatus = cond['status']
                         if ctype == 'Ready'        and cstatus == "True": is_ready=True
                         if ctype == 'PodScheduled' and cstatus == "True": is_scheduled=True
-            #print(i.status.conditions)
 
         info=''
         if is_scheduled and (not is_ready):
             try:
-                # print(f"status=<{status}>")
-                # kubectl get pods $L -o custom-columns=NAME:.metadata.name,STATUS:.status.containerStatuses[0].state.terminated.reason
                 container0 = status.container_statuses[0] # !!
-                #print(f"container0=<{container0}>")
-                #print(f"container0.state=<{container0.state}>")
-                #print(f"container0.state.terminated=<{container0.state.terminated}>")
-                #print(f"container0.state.terminated.reason=<{container0.state.terminated.reason}>")
                 info=container0.state.terminated.reason
-                #print(f"info=<{info}>")
             except:
                 info='NonReady'
-                #print( i.metadata )
 
         else:
             info=phase
         if info == "Running": info=green("Running")
 
         if hasattr(i.metadata,'deletion_timestamp'):
-            #print( i.metadata )
-            #print("GOT IT")
-            #die( i.metadata.deletion_timestamp )
             if i.metadata.deletion_timestamp: info = "Terminating"
-            #if i.metadata.deletionTimestamp != null: info == "Terminating"
 
         AGE, AGE_HMS = get_age(i)
 
@@ -271,7 +220,6 @@ def sprint_pods(namespace='all'):
 
         LINE = f"{i.metadata.namespace:12s} {type}{i.metadata.name:32s} {info} {pod_ip:15s}/{host:10s} {AGE_HMS}\n"
         op_lines.append({'age': AGE, 'line': LINE})
-        #op_lines.append(LINE); ages[idx]=AGE; idx+=1
 
     return sort_lines_by_age(op_lines, ages)
 
@@ -288,7 +236,6 @@ def sprint_deployments(namespace='all'):
 
     op_lines=[]; ages={}; idx=0
     for i in ret.items:
-        #print(f"{i.metadata.namespace:12s} {i.metadata.name:42s}")
         spec=i.spec.replicas
         stat=i.status.ready_replicas
         if stat == spec:
@@ -298,8 +245,6 @@ def sprint_deployments(namespace='all'):
         AGE, AGE_HMS = get_age(i)
         LINE = f"{type}{i.metadata.namespace:12s} {i.metadata.name:42s} {info} {AGE_HMS}\n"
         op_lines.append({'age': AGE, 'line': LINE})
-        #op_lines.append(LINE); ages[idx]=AGE; idx+=1
-        #retstr += f"{type}{i.metadata.namespace:12s} {i.metadata.name:42s}\n"
 
     return sort_lines_by_age(op_lines, ages)
 
@@ -316,11 +261,9 @@ def sprint_daemon_sets(namespace='all'):
 
     op_lines=[]; ages={}; idx=0
     for i in ret.items:
-        #print(f"{i.metadata.namespace:12s} {i.metadata.name:42s}")
         AGE, AGE_HMS = get_age(i)
         LINE = f"{type}{i.metadata.namespace:12s} {i.metadata.name:42s}\n"
         op_lines.append({'age': AGE, 'line': LINE})
-        #op_lines.append(LINE); ages[idx]=AGE; idx+=1
 
     return sort_lines_by_age(op_lines, ages)
 
@@ -337,7 +280,6 @@ def sprint_stateful_sets(namespace='all'):
 
     op_lines=[]; ages={}; idx=0
     for i in ret.items:
-        #print(f"{i.metadata.namespace:12s} {i.metadata.name:42s}")
         spec=i.spec.replicas
         stat=i.status.ready_replicas
         if stat == spec:
@@ -347,8 +289,6 @@ def sprint_stateful_sets(namespace='all'):
         AGE, AGE_HMS = get_age(i)
         LINE = f"{type}{i.metadata.namespace:12s} {i.metadata.name:42s} {info} {AGE_HMS}\n"
         op_lines.append({'age': AGE, 'line': LINE})
-        #op_lines.append(LINE); ages[idx]=AGE; idx+=1
-        #retstr += f"{type}{i.metadata.namespace:12s} {i.metadata.name:42s}\n"
 
     return sort_lines_by_age(op_lines, ages)
 
@@ -365,8 +305,6 @@ def sprint_replica_sets(namespace='all'):
 
     op_lines=[]; ages={}; idx=0
     for i in ret.items:
-        #print(f"{i.metadata.namespace:12s} {i.metadata.name:42s}")
-        #stat=0 #print(i.status) #sys.exit(0) #if 'readyReplicas' in i.status: stat=i.status.readyReplicas
         spec=i.spec.replicas
         stat=i.status.ready_replicas
         if stat == spec:
@@ -377,7 +315,6 @@ def sprint_replica_sets(namespace='all'):
         AGE, AGE_HMS = get_age(i)
         LINE = f"{type}{i.metadata.namespace:12s} {i.metadata.name:42s} {info:12s} {AGE_HMS}\n"
         op_lines.append({'age': AGE, 'line': LINE})
-        #op_lines.append(LINE); ages[idx]=AGE; idx+=1
 
     return sort_lines_by_age(op_lines, ages)
 
@@ -394,8 +331,6 @@ def sprint_replica_sets(namespace='all'):
 
     op_lines=[]; ages={}; idx=0
     for i in ret.items:
-        #print(f"{i.metadata.namespace:12s} {i.metadata.name:42s}")
-        #stat=0 #print(i.status) #sys.exit(0) #if 'readyReplicas' in i.status: stat=i.status.readyReplicas
         spec=i.spec.replicas
         stat=i.status.ready_replicas
         if stat == spec:
@@ -405,7 +340,6 @@ def sprint_replica_sets(namespace='all'):
         AGE, AGE_HMS = get_age(i)
         LINE = f"{type}{i.metadata.namespace:12s} {i.metadata.name:42s} {info} {AGE_HMS}\n"
         op_lines.append({'age': AGE, 'line': LINE})
-        #op_lines.append(LINE); ages[idx]=AGE; idx+=1
 
     return sort_lines_by_age(op_lines, ages)
 
@@ -422,27 +356,19 @@ def sprint_services(namespace='all'):
 
     op_lines=[]; ages={}; idx=0
     for i in ret.items:
-        #print(f"{i.metadata.namespace:12s} {i.metadata.name:42s}")
         NPORT=""
         spec = i.spec.to_dict()
         #{'cluster_ip': '10.109.121.252', 'external_i_ps': None, 'external_name': None, 'external_traffic_policy': None, 'health_check_node_port': None, 'load_balancer_ip': None, 'load_balancer_source_ranges': None, 'ports': [{'name': None, 'node_port': None, 'port': 80, 'protocol': 'TCP', 'target_port': 80}], 'publish_not_ready_addresses': None, 'selector': {'app': 'ckad-demo-green'}, 'session_affinity': 'None', 'session_affinity_config': None, 'type': 'ClusterIP'}
 
-        #print(spec)
-        #if 'ports' in spec and 'nodePort' in spec.ports[0]:
-            #NPORT=f"{spec.ports[0].nodePort} "
         if 'ports' in spec and 'node_port' in spec['ports'][0]:
             port0=spec['ports'][0]
             NPORT=f" NodePort:{port0['port']}:{port0['node_port']}"
 
         CIP=spec['cluster_ip']
-        #POLICY=f"external_traffic_policy={spec['external_traffic_policy']}"
-        #POLICY=spec['external_traffic_policy']
-        #if not POLICY: POLICY=" "
         POLICY=""
         AGE, AGE_HMS = get_age(i)
         LINE = f"{type}{i.metadata.namespace:12s} {i.metadata.name:42s} {CIP:15s}{NPORT:12s}{POLICY:8s} {AGE_HMS}\n"
         op_lines.append({'age': AGE, 'line': LINE})
-        #op_lines.append(LINE); ages[idx]=AGE; idx+=1
 
     return sort_lines_by_age(op_lines, ages)
 
@@ -459,11 +385,9 @@ def sprint_jobs(namespace='all'):
 
     op_lines=[]; ages={}; idx=0
     for i in ret.items:
-        #print(f"{i.metadata.namespace:12s} {i.metadata.name:42s}")
         AGE, AGE_HMS = get_age(i)
         LINE = f"{type}{i.metadata.namespace:12s} {i.metadata.name:42s} {AGE_HMS}\n"
         op_lines.append({'age': AGE, 'line': LINE})
-        #op_lines.append(LINE); ages[idx]=AGE; idx+=1
 
     return sort_lines_by_age(op_lines, ages)
 
@@ -480,11 +404,9 @@ def sprint_cron_jobs(namespace='all'):
 
     op_lines=[]; ages={}; idx=0
     for i in ret.items:
-        #print(f"{i.metadata.namespace:12s} {i.metadata.name:42s}")
         AGE, AGE_HMS = get_age(i)
         LINE = f"{type}{i.metadata.namespace:12s} {i.metadata.name:42s} {AGE_HMS}\n"
         op_lines.append({'age': AGE, 'line': LINE})
-        #op_lines.append(LINE); ages[idx]=AGE; idx+=1
 
     return sort_lines_by_age(op_lines, ages)
 
@@ -557,7 +479,6 @@ resources=[]
 
 while a <= (len(sys.argv)-1):
     arg=sys.argv[a];
-    #print(f'sys.argv[{a}]={sys.argv[a]}')
     a+=1
     if arg == "-st":            SHOW_TYPES=True;  continue
     if arg == "-show-types":    SHOW_TYPES=True;  continue
@@ -584,50 +505,37 @@ while a <= (len(sys.argv)-1):
         a+=1;
         continue
 
-    #if namespace == None: namespace = arg; continue
-    #if resources == []: resources = [arg]; continue
     resources.append( arg )
-    #die
-    #print(arg)
 
 final_resources=[]
 for reslist in resources:
-    #print(f'reslist={reslist}')
     if "," in reslist:
         res = reslist.split(",")
         final_resources.extend(res)
     else:
         res = reslist
         final_resources.append(res)
-    #print(f'final_resources={final_resources}')
 
 resources=final_resources
 
 if namespace == None: namespace=default_namespace
 if namespace == "-": namespace="all"
 
-#if len(resources) == 0: resources = [default_resources]
 if len(resources) == 0: resources = default_resources
 
 print(f'namespace={namespace}')
 print(f'resources={resources}')
-#sys.exit(0)
 
 last_op=''
 while True:
     op=''
     op += f'{ bold_white("Namespace:") } { bold_green(namespace) }\n'
-    #print(type(resources))
-    #print(resources)
     op += f'{ bold_white("Resources:") } { bold_blue( " ".join(resources) ) }\n'
 
     nodes = get_nodes()
 
     for resource in resources:
-        #op += '\n'
         match=False
-        #if resource.find("ALL") == 0:
-            #op+=sprint_nodes()
 
         if resource.find("no") == 0:
             match=True
@@ -679,10 +587,5 @@ while True:
         last_op = op
 
     time.sleep(0.5)     # Sleep for 500 milliseconds
-    #print(f"{bold('blue')}Resources: {" ".join(resources)}{colour('blue')}")
-
-    #print(resources)
-    #R=" ".join(resources)
-    #print(R)
 
 
