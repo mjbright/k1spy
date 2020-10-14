@@ -560,15 +560,42 @@ while True:
 
     for resource in resources:
         #op += '\n'
-        if resource.find("no") == 0:         op+='\n'+sprint_nodes()
-        if resource.find("svc") == 0:        op+='\n'+sprint_services(namespace)
-        if resource.find("service") == 0:    op+='\n'+sprint_services(namespace)
-        if resource.find("dep") == 0:        op+='\n'+sprint_deployments(namespace)
-        #if resource.find("deploy") == 0:     op+='\n'+sprint_deployments(namespace)
-        if resource.find("rs") == 0:         op+='\n'+sprint_replica_sets(namespace)
-        if resource.find("ss") == 0:         op+='\n'+sprint_stateful_sets(namespace)
-        if resource.find("replicaset") == 0: op+='\n'+sprint_replica_sets(namespace)
-        if resource.find("po") == 0:         op+='\n'+sprint_pods(namespace)
+        match=False
+        if resource.find("no") == 0:
+            match=True
+            op+='\n'+sprint_nodes()
+
+        if resource.find("svc") == 0:
+            match=True
+            op+='\n'+sprint_services(namespace)
+        if resource.find("service") == 0:
+            match=True
+            op+='\n'+sprint_services(namespace)
+
+        if resource.find("dep") == 0:
+            match=True
+            op+='\n'+sprint_deployments(namespace)
+        if resource.find("rs") == 0:
+            match=True
+            op+='\n'+sprint_replica_sets(namespace)
+        if resource.find("ss") == 0 or resource.find("sts") == 0:
+            match=True
+            op+='\n'+sprint_stateful_sets(namespace)
+
+        if resource.find("replicaset") == 0:
+            match=True
+            op+='\n'+sprint_replica_sets(namespace)
+
+        if resource.find("po") == 0:
+            match=True
+            op+='\n'+sprint_pods(namespace)
+
+        if resource.find("cj") == 0:
+            match=True
+            op+='\n'+sprint_cron_jobs(namespace)
+        if resource.find("cron") == 0:
+            match=True
+            op+='\n'+sprint_cron_jobs(namespace)
         # LATER: if resource.find("pvc") == 0:        op+='\n'+sprint_pvcs(namespace)
         # LATER: if resource.find("pv") == 0:         op+='\n'+sprint_pvs(namespace)
 
