@@ -365,11 +365,13 @@ def sprint_services(namespace='all'):
         spec = i.spec.to_dict()
         #{'cluster_ip': '10.109.121.252', 'external_i_ps': None, 'external_name': None, 'external_traffic_policy': None, 'health_check_node_port': None, 'load_balancer_ip': None, 'load_balancer_source_ranges': None, 'ports': [{'name': None, 'node_port': None, 'port': 80, 'protocol': 'TCP', 'target_port': 80}], 'publish_not_ready_addresses': None, 'selector': {'app': 'ckad-demo-green'}, 'session_affinity': 'None', 'session_affinity_config': None, 'type': 'ClusterIP'}
 
-        if 'ports' in spec and 'node_port' in spec['ports'][0]:
+        if spec and 'ports' in spec and spec['ports'] and 'node_port' in spec['ports'][0]:
             port0=spec['ports'][0]
             NPORT=f" NodePort:{port0['port']}:{port0['node_port']}"
 
         CIP=spec['cluster_ip']
+        if not CIP: CIP=''
+
         POLICY=""
         AGE, AGE_HMS = get_age(i)
         LINE = f"{type}{i.metadata.namespace:12s} {i.metadata.name:42s} {CIP:15s}{NPORT:12s}{POLICY:8s} {AGE_HMS}\n"
