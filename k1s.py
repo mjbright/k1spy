@@ -565,6 +565,9 @@ while True:
         if resource.find("dep") == 0:
             match=True
             op+=sprint_deployments(namespace)
+        if resource.find("ds") == 0 or resource.find("dset") == 0 or resource.find("daemonset") == 0:
+            match=True
+            op+=sprint_daemon_sets(namespace)
         if resource.find("rs") == 0 or resource.find("replicaset") == 0:
             match=True
             op+=sprint_replica_sets(namespace)
