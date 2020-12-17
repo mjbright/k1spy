@@ -134,8 +134,19 @@ def sprint_nodes():
     for i in ret.items:
         node_ip   = i.status.addresses[0].address
         node_name = i.metadata.name
+
+        taints = i.spec.taints
+        if taints and len(taints) != 0:
+            noexec=False
+            for taint in taints:
+                if hasattr(taint, 'effect') and taint.effect == 'NoExecute': noexec=True
+            if noexec:
+                node_name = red(node_name)
+            else:
+                node_name = yellow(node_name)
+
         AGE, AGE_HMS = get_age(i)
-        LINE=f"{type}{i.metadata.name:12s} { green( node_ip ) :24s} {AGE_HMS}\n"
+        LINE=f"{type}{node_name:12s} { green( node_ip ) :24s} {AGE_HMS}\n"
         op_lines.append({'age': AGE, 'line': LINE})
 
     return sort_lines_by_age(op_lines, ages)
