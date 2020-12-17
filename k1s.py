@@ -551,7 +551,7 @@ while True:
         if resource.find("all") == 0 or resource.find("nall") == 0:
             match=True
             if resource.find("nall") == 0:
-                op+=sprint_nodes(namespace)
+                op+=sprint_nodes()
             op+=sprint_services(namespace)
             op+=sprint_deployments(namespace)
             op+=sprint_replica_sets(namespace)
