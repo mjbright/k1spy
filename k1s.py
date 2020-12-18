@@ -217,6 +217,18 @@ def sprint_pods(namespace='all'):
         else:
             info=phase
 
+        des_act='0/N '
+        if is_scheduled and is_ready:
+            try:
+                cready=0
+                cexpected=len( status['container_statuses'] )
+                for c in status['container_statuses']:
+                    if 'ready' in c:
+                        if c['ready'] == True: cready+=1
+                des_act=f'{cready}/{cexpected} '
+            except:
+                des_act=''
+
         if info == "Running": info=green("Running")
         if info == "Complete": info=yellow("Running")
 
@@ -234,7 +246,7 @@ def sprint_pods(namespace='all'):
             print(f"AGE={AGE_HMS}\n")
 
 
-        LINE = f"{i.metadata.namespace:12s} {type}{i.metadata.name:32s} {info} {pod_ip:15s}/{host:10s} {AGE_HMS}\n"
+        LINE = f"{i.metadata.namespace:12s} {des_act}{type}{i.metadata.name:32s} {info} {pod_ip:15s}/{host:10s} {AGE_HMS}\n"
         op_lines.append({'age': AGE, 'line': LINE})
 
     return sort_lines_by_age(op_lines, ages)
