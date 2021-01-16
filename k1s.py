@@ -4,23 +4,50 @@ SHOW_TYPES=True
 
 VERBOSE=False
 
+#default_resources=["pods"]
+default_resources=["all"]
+
 #LATER: requires new fields
 #def print_pvs(namespace='all'):  print(sprint_pvs(namespace))
 #def sprint_pvcs(namespace):
 #def print_pvcs(namespace='all'): print(sprint_pvcs(namespace))
 #def sprint_pvs(namespace):
 
-import sys, time
+import os, sys, time
 from kubernetes import client, config
 
 # For timestamp handling:
 from datetime import datetime
 
-# Make sure ~/.kube/config is pointing to a valid cluster or kubernetes import will timeout ... after quite a while ...
-config.load_kube_config()
-#config.load_incluster_config()
+## -- Get kubeconfig/cluster information: -------------------------
 
-# Get API clients:
+# Make sure ~/.kube/config is pointing to a valid cluster or kubernetes import will timeout ... after quite a while ...
+HOME=os.getenv('HOME')
+KUBECONFIG=os.getenv('KUBECONFIG')
+DEFAULT_KUBECONFIG=HOME+'/.kube/config'
+
+if KUBECONFIG == '':
+    KUBECONFIG=DEFAULT_KUBECONFIG
+
+#config.load_kube_config()
+if os.path.exists(KUBECONFIG):
+    print(f'Using KUBECONFIG={KUBECONFIG}')
+    config.load_kube_config(KUBECONFIG)
+else:
+    print(f'No such kubeconfig file as "{KUBECONFIG}" - assuming in cluster')
+    config.load_incluster_config()
+
+## -- Get context/namespace  information: -------------------------
+
+contexts, active_context = config.list_kube_config_contexts()
+# {'context': {'cluster': 'kubernetes', 'namespace': 'k8scenario', 'user': 'kubernetes-admin'}, 'name': 'k8scenario'}
+print(active_context)
+default_namespace=active_context['context']['namespace']
+context=active_context['name']
+print(f'namespace={default_namespace}')
+
+## -- Get API clients: --------------------------------------------
+
 corev1 = client.CoreV1Api()
 appsv1 = client.AppsV1Api()
 batchv1 = client.BatchV1Api()
@@ -494,9 +521,6 @@ def test_methods():
 
 #test_methods()
 
-default_namespace="default"
-default_resources=["pods"]
-
 # Clears but keeps at bottom of screeen:
 #def cls(): print(chr(27) + "[2J")
 # Clears and positions at top of screeen:
@@ -553,14 +577,15 @@ if namespace == "-": namespace="all"
 
 if len(resources) == 0: resources = default_resources
 
-print(f'namespace={namespace}')
-print(f'resources={resources}')
+full_context=f'{ bold_white("Context:") } { bold_green(context) } / { bold_white("Namespace:") } { bold_green(namespace) } / { bold_white("Resources:") } { bold_green(resources) }\n'
+print(f'full_context={full_context}')
 
 last_op=''
 while True:
     op=''
-    op += f'{ bold_white("Namespace:") } { bold_green(namespace) }\n'
-    op += f'{ bold_white("Resources:") } { bold_blue( " ".join(resources) ) }\n'
+    full_context=f'{ bold_white("Context:") } { bold_green(context) } / { bold_white("Namespace:") } { bold_green(namespace) } / { bold_white("Resources:") } { bold_green(resources) }\n'
+    op += full_context
+    #op += f'{ bold_white("Resources:") } { bold_blue( " ".join(resources) ) }\n'
 
     nodes = get_nodes()
 
