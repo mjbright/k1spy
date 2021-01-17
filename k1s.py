@@ -26,7 +26,7 @@ HOME=os.getenv('HOME')
 KUBECONFIG=os.getenv('KUBECONFIG')
 DEFAULT_KUBECONFIG=HOME+'/.kube/config'
 
-if KUBECONFIG == '':
+if KUBECONFIG == None:
     KUBECONFIG=DEFAULT_KUBECONFIG
 
 #config.load_kube_config()
@@ -41,10 +41,14 @@ else:
 
 contexts, active_context = config.list_kube_config_contexts()
 # {'context': {'cluster': 'kubernetes', 'namespace': 'k8scenario', 'user': 'kubernetes-admin'}, 'name': 'k8scenario'}
-print(active_context)
-default_namespace=active_context['context']['namespace']
+
+default_namespace='default'
+if 'namespace' in active_context['context']:
+    default_namespace=active_context['context']['namespace']
+
+#print(active_context)
 context=active_context['name']
-print(f'namespace={default_namespace}')
+print(f'context={context} namespace={default_namespace}')
 
 ## -- Get API clients: --------------------------------------------
 
