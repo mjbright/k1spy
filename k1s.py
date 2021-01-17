@@ -579,7 +579,8 @@ def test_methods():
 # Clears but keeps at bottom of screeen:
 #def cls(): print(chr(27) + "[2J")
 # Clears and positions at top of screeen:
-def cls(): print('\033[H\033[J')
+#def cls(): print('\033[H\033[J')
+def cls(): sys.stdout.write('\033[H\033[J')
 
 a=1
 
