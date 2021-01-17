@@ -243,23 +243,23 @@ def print_pvs(namespace='all'):  print(sprint_pvs(namespace))
 def sprint_pvcs(namespace):
     type =  'persistentvolumeclaims:' if SHOW_TYPES else ''
     if namespace == 'all':
-        ret = corev1.list_pvc_for_all_namespaces(watch=False)
+        ret = corev1.list_persistent_volume_claim_for_all_namespaces(watch=False)
     else:
-        ret = corev1.list_namespaced_pvc(watch=False, namespace=namespace)
+        ret = corev1.list_namespaced_persistent_volume_claim(watch=False, namespace=namespace)
     if len(ret.items) == 0: return ''
     write_json_items(ret.items, TMP_DIR + '/pvcsN.json')
 
-    pass
+    return ''
 
 def print_pvcs(namespace='all'): print(sprint_pvcs(namespace))
 
 def sprint_pvs(namespace):
     type =  'persistentvolumes:' if SHOW_TYPES else ''
-    ret = corev1.list_pv(watch=False)
+    ret = corev1.list_persistent_volume(watch=False)
     if len(ret.items) == 0: return ''
     write_json_items(ret.items, TMP_DIR + '/pvsN.json')
 
-    pass
+    return ''
 
 def print_pods(namespace='all'): print(sprint_pods(namespace)[:-1])
 
@@ -716,6 +716,8 @@ while True:
             op+=sprint_pods(namespace)
             op+=sprint_jobs(namespace)
             op+=sprint_cron_jobs(namespace)
+            op+=sprint_pvs(namespace)
+            op+=sprint_pvcs(namespace)
 
         if resource.find("svc") == 0 or resource.find("service") == 0:
             match=True
