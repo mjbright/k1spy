@@ -132,7 +132,7 @@ def setHMS(AGEsecs):
             AGEsecs = AGEsecs - (60 * mins)
             OP+=f"{mins:02d}m"
         OP+=f"{AGEsecs:02}s"
-        return OP
+        return OP.strip('0') # Strip of any leading zero
     except:
         return "-"
 
