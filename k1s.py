@@ -11,17 +11,12 @@ NS_FMT="15s"
 #default_resources=["pods"]
 default_resources=["all"]
 
-#LATER: requires new fields
-#def print_pvs(namespace='all'):  print(sprint_pvs(namespace))
-#def sprint_pvcs(namespace):
-#def print_pvcs(namespace='all'): print(sprint_pvcs(namespace))
-#def sprint_pvs(namespace):
-
 import os, sys, time
 from kubernetes import client, config
 
 # For timestamp handling:
 from datetime import datetime
+import json
 
 ## -- Get kubeconfig/cluster information: -------------------------
 
@@ -40,6 +35,10 @@ if os.path.exists(KUBECONFIG):
 else:
     print(f'No such kubeconfig file as "{KUBECONFIG}" - assuming in cluster')
     config.load_incluster_config()
+
+#os.mkdir( '~/tmp', 0755 )
+TMP_DIR = HOME + '/tmp'
+if not os.path.exists(TMP_DIR): os.mkdir( TMP_DIR )
 
 ## -- Get context/namespace  information: -------------------------
 
@@ -140,6 +139,25 @@ def setHMS(AGEsecs):
     except:
         return "-"
 
+def write_json(response, json_file):
+    #def datetime_handler(x):
+        #if isinstance(x, datetime.datetime):
+            #return x.isoformat()
+        #raise TypeError("Unknown type")
+
+    #json_struct = json.dumps(response, default=datetime_handler, indent=2)
+    json_struct = json.dumps(response, indent=2)
+    Path(json_file).write_text(json_struct)
+
+def write_json_items(items, file):
+    loop=1
+    for i in items:
+        jfile=file.replace("N.json", f'{loop}.json')
+        fd = open(jfile, 'w')
+        fd.write(str(i))
+        loop += 1
+        #write_json(i, jfile)
+
 def get_age(i):
     creation_time = str(i.metadata.creation_timestamp)
     if '+00:00' in creation_time: creation_time = creation_time[ : creation_time.find('+00:00') ]
@@ -175,6 +193,7 @@ def sprint_nodes():
 
     ret = corev1.list_node(watch=False)
     if len(ret.items) == 0: return ''
+    write_json_items(ret.items, TMP_DIR + '/nodesN.json')
 
     op_lines=[]; ages={}; idx=0
 
@@ -219,6 +238,29 @@ def get_nodes():
         nodes[node_ip] = node_name
     return nodes
 
+def print_pvs(namespace='all'):  print(sprint_pvs(namespace))
+
+def sprint_pvcs(namespace):
+    type =  'persistentvolumeclaims:' if SHOW_TYPES else ''
+    if namespace == 'all':
+        ret = corev1.list_pvc_for_all_namespaces(watch=False)
+    else:
+        ret = corev1.list_namespaced_pvc(watch=False, namespace=namespace)
+    if len(ret.items) == 0: return ''
+    write_json_items(ret.items, TMP_DIR + '/pvcsN.json')
+
+    pass
+
+def print_pvcs(namespace='all'): print(sprint_pvcs(namespace))
+
+def sprint_pvs(namespace):
+    type =  'persistentvolumes:' if SHOW_TYPES else ''
+    ret = corev1.list_pv(watch=False)
+    if len(ret.items) == 0: return ''
+    write_json_items(ret.items, TMP_DIR + '/pvsN.json')
+
+    pass
+
 def print_pods(namespace='all'): print(sprint_pods(namespace)[:-1])
 
 def sprint_pods(namespace='all'):
@@ -230,6 +272,7 @@ def sprint_pods(namespace='all'):
     else:
         ret = corev1.list_namespaced_pod(watch=False, namespace=namespace)
     if len(ret.items) == 0: return ''
+    write_json_items(ret.items, TMP_DIR + '/podsN.json')
 
     op_lines=[]; ages={}; idx=0
     for i in ret.items:
@@ -326,6 +369,7 @@ def sprint_deployments(namespace='all'):
     else:
         ret = appsv1.list_namespaced_deployment(watch=False, namespace=namespace)
     if len(ret.items) == 0: return ''
+    write_json_items(ret.items, TMP_DIR + '/deploysN.json')
 
     op_lines=[]; ages={}; idx=0
     for i in ret.items:
@@ -355,6 +399,7 @@ def sprint_daemon_sets(namespace='all'):
     else:
         ret = appsv1.list_namespaced_daemon_set(watch=False, namespace=namespace)
     if len(ret.items) == 0: return ''
+    write_json_items(ret.items, TMP_DIR + '/dsetsN.json')
 
     op_lines=[]; ages={}; idx=0
     for i in ret.items:
@@ -380,6 +425,7 @@ def sprint_stateful_sets(namespace='all'):
     else:
         ret = appsv1.list_namespaced_stateful_set(watch=False, namespace=namespace)
     if len(ret.items) == 0: return ''
+    write_json_items(ret.items, TMP_DIR + '/ssetsN.json')
 
     op_lines=[]; ages={}; idx=0
     for i in ret.items:
@@ -406,6 +452,7 @@ def sprint_replica_sets(namespace='all'):
     else:
         ret = appsv1.list_namespaced_replica_set(watch=False, namespace=namespace)
     if len(ret.items) == 0: return ''
+    write_json_items(ret.items, TMP_DIR + '/repsetsN.json')
 
     op_lines=[]; ages={}; idx=0
     for i in ret.items:
@@ -433,6 +480,7 @@ def sprint_services(namespace='all'):
     else:
         ret = corev1.list_namespaced_service(watch=False, namespace=namespace)
     if len(ret.items) == 0: return ''
+    write_json_items(ret.items, TMP_DIR + '/servicesN.json')
 
     op_lines=[]; ages={}; idx=0
     for i in ret.items:
@@ -481,6 +529,7 @@ def sprint_jobs(namespace='all'):
     else:
         ret = batchv1.list_namespaced_job(watch=False, namespace=namespace)
     if len(ret.items) == 0: return ''
+    write_json_items(ret.items, TMP_DIR + '/jobsN.json')
 
     op_lines=[]; ages={}; idx=0
     for i in ret.items:
@@ -506,6 +555,7 @@ def sprint_cron_jobs(namespace='all'):
     else:
         ret = batchv1beta1.list_namespaced_cron_job(watch=False, namespace=namespace)
     if len(ret.items) == 0: return ''
+    write_json_items(ret.items, TMP_DIR + '/cronjobsN.json')
 
     op_lines=[]; ages={}; idx=0
     for i in ret.items:
@@ -694,8 +744,12 @@ while True:
         if resource.find("cj") == 0 or resource.find("cron") == 0:
             match=True
             op+=sprint_cron_jobs(namespace)
-        # LATER: if resource.find("pvc") == 0:        op+=sprint_pvcs(namespace)
-        # LATER: if resource.find("pv") == 0:         op+=sprint_pvs(namespace)
+        if resource.find("pvc") == 0:
+            match=True
+            op+=sprint_pvcs(namespace)
+        if resource.find("pv") == 0:
+            match=True
+            op+=sprint_pvs(namespace)
 
         if not match:
             die(f"No match for resource type '{resource}'")
