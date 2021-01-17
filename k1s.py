@@ -215,10 +215,11 @@ def get_nodes():
         nodes[node_ip] = node_name
     return nodes
 
-def print_pods(namespace='all'): print(sprint_pods(namespace))
+def print_pods(namespace='all'): print(sprint_pods(namespace)[:-1])
 
 def sprint_pods(namespace='all'):
-    type =  'pod/' if SHOW_TYPES else ''
+    #type =  'pod/' if SHOW_TYPES else ''
+    type =  'pods:' if SHOW_TYPES else ''
 
     if namespace == 'all':
         ret = corev1.list_pod_for_all_namespaces(watch=False)
@@ -271,17 +272,21 @@ def sprint_pods(namespace='all'):
         else:
             info=phase
 
-        des_act='0/N '
+        try:
+            cexpected=len( status['container_statuses'] )
+        except:
+            cexpected=0
+        cready=0
+        des_act=f'{cready}/{cexpected} '
         if is_scheduled and is_ready:
             try:
-                cready=0
-                cexpected=len( status['container_statuses'] )
                 for c in status['container_statuses']:
                     if 'ready' in c:
                         if c['ready'] == True: cready+=1
                 des_act=f'{cready}/{cexpected} '
             except:
-                des_act=''
+                des_act=f'{cready}/{cexpected} '
+        if cready < cexpected: des_act=yellow(des_act)
 
         if info == "Running": info=green("Running")
         if info == "Complete": info=yellow("Running")
@@ -299,16 +304,25 @@ def sprint_pods(namespace='all'):
             print(f"creation_time={creation_time}")
             print(f"AGE={AGE_HMS}\n")
 
+        ns_info=''
+        if namespace == 'all':
+            ns_info=f'[{i.metadata.namespace:12s}] '
 
-        LINE = f"{i.metadata.namespace:12s} {des_act}{type}{i.metadata.name:32s} {info} {pod_ip:15s}/{host:10s} {AGE_HMS}\n"
+        #LINE = f"{type}{i.metadata.namespace:12s} {i.metadata.name:42s} {info} {AGE_HMS}\n"
+        #LINE = f"  {ns_info}{i.metadata.name:42s} {info} {AGE_HMS}\n"
+        #LINE = f"{i.metadata.namespace:12s} {des_act}{type}{i.metadata.name:32s} {info} {pod_ip:15s}/{host:10s} {AGE_HMS}\n"
+        #LINE = f"  {ns_info}{des_act}{i.metadata.name:32s} {info} {pod_ip:15s}/{host:10s} {AGE_HMS}\n"
+        LINE = f"  {ns_info} {i.metadata.name:32s} {des_act} {info} {pod_ip:15s}/{host:10s} {AGE_HMS}\n"
         op_lines.append({'age': AGE, 'line': LINE})
 
-    return sort_lines_by_age(op_lines, ages)
+    #return (type + sort_lines_by_age(op_lines, ages))[:-1]
+    return (type + sort_lines_by_age(op_lines, ages)).rstrip()
 
 def print_deployments(namespace='all'): print(sprint_deployments(namespace))
 
 def sprint_deployments(namespace='all'):
-    type =  'deploy/' if SHOW_TYPES else ''
+    #type =  'deploy' if SHOW_TYPES else ''
+    type =  'deployments:' if SHOW_TYPES else ''
 
     if namespace == 'all':
         ret = appsv1.list_deployment_for_all_namespaces(watch=False)
@@ -318,22 +332,26 @@ def sprint_deployments(namespace='all'):
 
     op_lines=[]; ages={}; idx=0
     for i in ret.items:
-        spec=i.spec.replicas
-        stat=i.status.ready_replicas
-        if stat == spec:
-            info=green(f'{stat}/{spec}')
-        else:
-            info=yellow(f'{stat}/{spec}')
+        info=get_replicas_info(i)
         AGE, AGE_HMS = get_age(i)
-        LINE = f"{type}{i.metadata.namespace:12s} {i.metadata.name:42s} {info} {AGE_HMS}\n"
+
+        ns_info=''
+        if namespace == 'all':
+            ns_info=f'[{i.metadata.namespace:12s}] '
+
+        #LINE = f"{type}{i.metadata.namespace:12s} {i.metadata.name:42s} {info} {AGE_HMS}\n"
+        LINE = f"  {ns_info} {i.metadata.name:42s} {info} {AGE_HMS}\n"
         op_lines.append({'age': AGE, 'line': LINE})
 
-    return sort_lines_by_age(op_lines, ages)
+    #return (type + sort_lines_by_age(op_lines, ages))[:-1]
+    #return (type + sort_lines_by_age(op_lines, ages)).rstrip()
+    return type + sort_lines_by_age(op_lines, ages)
 
 def print_daemon_sets(namespace='all'): print(sprint_daemon_sets(namespace))
 
 def sprint_daemon_sets(namespace='all'):
-    type =  'ds/' if SHOW_TYPES else ''
+    #type =  'ds/' if SHOW_TYPES else ''
+    type =  'daemonsets:' if SHOW_TYPES else ''
 
     if namespace == 'all':
         ret = appsv1.list_daemon_set_for_all_namespaces(watch=False)
@@ -344,15 +362,21 @@ def sprint_daemon_sets(namespace='all'):
     op_lines=[]; ages={}; idx=0
     for i in ret.items:
         AGE, AGE_HMS = get_age(i)
-        LINE = f"{type}{i.metadata.namespace:12s} {i.metadata.name:42s}\n"
+
+        ns_info=''
+        if namespace == 'all':
+            ns_info=f'[{i.metadata.namespace:12s}] '
+
+        LINE = f"  {ns_info} {i.metadata.name:42s}\n"
         op_lines.append({'age': AGE, 'line': LINE})
 
-    return sort_lines_by_age(op_lines, ages)
+    return type + sort_lines_by_age(op_lines, ages)
 
 def print_stateful_sets(namespace='all'): print(sprint_stateful_sets(namespace))
 
 def sprint_stateful_sets(namespace='all'):
-    type =  'ss/' if SHOW_TYPES else ''
+    #type =  'ss/' if SHOW_TYPES else ''
+    type =  'statefulsets:' if SHOW_TYPES else ''
 
     if namespace == 'all':
         ret = appsv1.list_stateful_set_for_all_namespaces(watch=False)
@@ -362,48 +386,23 @@ def sprint_stateful_sets(namespace='all'):
 
     op_lines=[]; ages={}; idx=0
     for i in ret.items:
-        spec=i.spec.replicas
-        stat=i.status.ready_replicas
-        if stat == spec:
-            info=green(f'{stat}/{spec}')
-        else:
-            info=yellow(f'{stat}/{spec}')
+        info=get_replicas_info(i)
         AGE, AGE_HMS = get_age(i)
-        LINE = f"{type}{i.metadata.namespace:12s} {i.metadata.name:42s} {info} {AGE_HMS}\n"
+
+        ns_info=''
+        if namespace == 'all':
+            ns_info=f'[{i.metadata.namespace:12s}] '
+
+        LINE = f"  {ns_info} {i.metadata.name:42s} {info} {AGE_HMS}\n"
         op_lines.append({'age': AGE, 'line': LINE})
 
-    return sort_lines_by_age(op_lines, ages)
-
-def print_replica_sets(namespace='all'): print(sprint_stateful_sets(namespace))
-
-def sprint_replica_sets(namespace='all'):
-    type =  'rs/' if SHOW_TYPES else ''
-
-    if namespace == 'all':
-        ret = appsv1.list_replica_set_for_all_namespaces(watch=False)
-    else:
-        ret = appsv1.list_namespaced_replica_set(watch=False, namespace=namespace)
-    if len(ret.items) == 0: return ''
-
-    op_lines=[]; ages={}; idx=0
-    for i in ret.items:
-        spec=i.spec.replicas
-        stat=i.status.ready_replicas
-        if stat == spec:
-            info=green(f'{stat}/{spec}')
-        else:
-            info=yellow(f'{stat}/{spec}')
-
-        AGE, AGE_HMS = get_age(i)
-        LINE = f"{type}{i.metadata.namespace:12s} {i.metadata.name:42s} {info:12s} {AGE_HMS}\n"
-        op_lines.append({'age': AGE, 'line': LINE})
-
-    return sort_lines_by_age(op_lines, ages)
+    return type + sort_lines_by_age(op_lines, ages)
 
 def print_replica_sets(namespace='all'): print(sprint_replica_sets(namespace))
 
 def sprint_replica_sets(namespace='all'):
-    type =  'rs/' if SHOW_TYPES else ''
+    #type =  'rs/' if SHOW_TYPES else ''
+    type =  'replicasets:' if SHOW_TYPES else ''
 
     if namespace == 'all':
         ret = appsv1.list_replica_set_for_all_namespaces(watch=False)
@@ -413,22 +412,24 @@ def sprint_replica_sets(namespace='all'):
 
     op_lines=[]; ages={}; idx=0
     for i in ret.items:
-        spec=i.spec.replicas
-        stat=i.status.ready_replicas
-        if stat == spec:
-            info=green(f'{stat}/{spec}')
-        else:
-            info=yellow(f'{stat}/{spec}')
+        info=get_replicas_info(i)
         AGE, AGE_HMS = get_age(i)
-        LINE = f"{type}{i.metadata.namespace:12s} {i.metadata.name:42s} {info} {AGE_HMS}\n"
+
+        ns_info=''
+        if namespace == 'all':
+            ns_info=f'[{i.metadata.namespace:12s}] '
+
+        #LINE = f"{type}{i.metadata.namespace:12s} {i.metadata.name:42s} {info:12s} {AGE_HMS}\n"
+        LINE = f"  {ns_info} {i.metadata.name:42s} {info:12s} {AGE_HMS}\n"
         op_lines.append({'age': AGE, 'line': LINE})
 
-    return sort_lines_by_age(op_lines, ages)
+    return type + sort_lines_by_age(op_lines, ages)
 
 def print_services(namespace='all'): print(sprint_services(namespace))
 
 def sprint_services(namespace='all'):
-    type =  'svc/' if SHOW_TYPES else ''
+    #type =  'svc/' if SHOW_TYPES else ''
+    type =  'services:' if SHOW_TYPES else ''
 
     if namespace == 'all':
         ret = corev1.list_service_for_all_namespaces(watch=False)
@@ -440,26 +441,43 @@ def sprint_services(namespace='all'):
     for i in ret.items:
         NPORT=""
         spec = i.spec.to_dict()
-        #{'cluster_ip': '10.109.121.252', 'external_i_ps': None, 'external_name': None, 'external_traffic_policy': None, 'health_check_node_port': None, 'load_balancer_ip': None, 'load_balancer_source_ranges': None, 'ports': [{'name': None, 'node_port': None, 'port': 80, 'protocol': 'TCP', 'target_port': 80}], 'publish_not_ready_addresses': None, 'selector': {'app': 'ckad-demo-green'}, 'session_affinity': 'None', 'session_affinity_config': None, 'type': 'ClusterIP'}
+        #print(spec); die("X");
+        #{'cluster_ip': '10.109.121.252', 'external_ips': None, 'external_name': None, 'external_traffic_policy': None, 'health_check_node_port': None, 'load_balancer_ip': None, 'load_balancer_source_ranges': None,
+        #  'ports': [{'name': None, 'node_port': None, 'port': 80, 'protocol': 'TCP', 'target_port': 80}],
+        #  'publish_not_ready_addresses': None, 'selector': {'app': 'ckad-demo-green'}, 'session_affinity': 'None', 'session_affinity_config': None, 'type': 'ClusterIP'}
+
+        SVC_TYPE=spec['type']
+        EXT_IPS=spec['external_i_ps']
+        if not EXT_IPS: EXT_IPS='Pending' # Needs checking, is it this field or load_balancer_ip ??
 
         if spec and 'ports' in spec and spec['ports'] and 'node_port' in spec['ports'][0]:
             port0=spec['ports'][0]
-            NPORT=f" NodePort:{port0['port']}:{port0['node_port']}"
+            if 'node_port' in port0 and port0['node_port'] != None:
+                PORT=f" {port0['port']}:{port0['node_port']}"
+            else:
+                PORT=f" {port0['port']}"
+            PORT += f"/{port0['protocol']}"
 
         CIP=spec['cluster_ip']
         if not CIP: CIP=''
 
         POLICY=""
         AGE, AGE_HMS = get_age(i)
-        LINE = f"{type}{i.metadata.namespace:12s} {i.metadata.name:42s} {CIP:15s}{NPORT:12s}{POLICY:8s} {AGE_HMS}\n"
+
+        ns_info=''
+        if namespace == 'all':
+            ns_info=f'[{i.metadata.namespace:12s}] '
+
+        LINE = f"  {ns_info} {i.metadata.name:42s} {CIP:15s} {SVC_TYPE:12s} {EXT_IPS:16s} {PORT:12s}{POLICY:8s} {AGE_HMS}\n"
         op_lines.append({'age': AGE, 'line': LINE})
 
-    return sort_lines_by_age(op_lines, ages)
+    return type + sort_lines_by_age(op_lines, ages)
 
 def print_jobs(namespace='all'): print(sprint_jobs(namespace))
 
 def sprint_jobs(namespace='all'):
-    type =  'job/' if SHOW_TYPES else ''
+    #type =  'job/' if SHOW_TYPES else ''
+    type =  'jobs:' if SHOW_TYPES else ''
 
     if namespace == 'all':
         ret = batchv1.list_job_for_all_namespaces(watch=False)
@@ -470,15 +488,21 @@ def sprint_jobs(namespace='all'):
     op_lines=[]; ages={}; idx=0
     for i in ret.items:
         AGE, AGE_HMS = get_age(i)
-        LINE = f"{type}{i.metadata.namespace:12s} {i.metadata.name:42s} {AGE_HMS}\n"
+
+        ns_info=''
+        if namespace == 'all':
+            ns_info=f'[{i.metadata.namespace:12s}] '
+
+        LINE = f"  {ns_info} {i.metadata.name:42s} {AGE_HMS}\n"
         op_lines.append({'age': AGE, 'line': LINE})
 
-    return sort_lines_by_age(op_lines, ages)
+    return type + sort_lines_by_age(op_lines, ages)
 
 def print_cron_jobs(namespace='all'): print(sprint_cron_jobs(namespace))
 
 def sprint_cron_jobs(namespace='all'):
-    type =  'cronjob/' if SHOW_TYPES else ''
+    #type =  'cronjob/' if SHOW_TYPES else ''
+    type =  'cronjobs:' if SHOW_TYPES else ''
 
     if namespace == 'all':
         ret = batchv1beta1.list_cron_job_for_all_namespaces(watch=False)
@@ -489,10 +513,14 @@ def sprint_cron_jobs(namespace='all'):
     op_lines=[]; ages={}; idx=0
     for i in ret.items:
         AGE, AGE_HMS = get_age(i)
-        LINE = f"{type}{i.metadata.namespace:12s} {i.metadata.name:42s} {AGE_HMS}\n"
+        ns_info=''
+        if namespace == 'all':
+            ns_info=f'[{i.metadata.namespace:12s}] '
+
+        LINE = f"{ns_info} {i.metadata.name:42s} {AGE_HMS}\n"
         op_lines.append({'age': AGE, 'line': LINE})
 
-    return sort_lines_by_age(op_lines, ages)
+    return type + sort_lines_by_age(op_lines, ages)
 
 def test_methods():
     global nodes
