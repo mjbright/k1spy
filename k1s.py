@@ -241,8 +241,8 @@ def sprint_pods(namespace='all'):
         if host_ip in nodes:
             host = nodes[host_ip]
             if   "ma" in host: host=cyan(host)
-            elif "wo" in host: host=magenta(host)
-            else:              pass
+            #elif "wo" in host: host=magenta(host)
+            #else:              pass
 
         phase=i.status.phase
         is_ready=False
