@@ -153,6 +153,16 @@ def get_age(i):
 
     return AGE, setHMS(AGE)
 
+def get_replicas_info(instance):
+    spec=instance.spec.replicas
+    stat=instance.status.ready_replicas
+    if stat == spec:
+        replicas_info=green(f'{stat}/{spec}')
+    else:
+        if stat == None: stat = 0
+        replicas_info=yellow(f'{stat}/{spec}')
+    return replicas_info
+
 def print_nodes(): print(sprint_nodes())
 
 def sprint_nodes():
