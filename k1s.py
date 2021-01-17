@@ -166,15 +166,28 @@ def get_replicas_info(instance):
 def print_nodes(): print(sprint_nodes())
 
 def sprint_nodes():
-    type =  'node/' if SHOW_TYPES else ''
+    #type =  'node/' if SHOW_TYPES else ''
+    type =  'nodes:' if SHOW_TYPES else ''
 
     ret = corev1.list_node(watch=False)
     if len(ret.items) == 0: return ''
 
     op_lines=[]; ages={}; idx=0
+
+    max_name_len=0
+    for i in ret.items:
+        #print(max_name_len)
+        node_name = i.metadata.name
+        if len(node_name) > max_name_len: max_name_len=len(node_name)
+        name_format=f'<{max_name_len+1}s'
+
     for i in ret.items:
         node_ip   = i.status.addresses[0].address
         node_name = i.metadata.name
+
+        # Do node_name padding before adding ansi color chars:
+        #node_name = node_name + '-------'; node_name = node_name[0:8]
+        node_name = f'{node_name:{name_format}}'
 
         taints = i.spec.taints
         if taints and len(taints) != 0:
@@ -187,10 +200,10 @@ def sprint_nodes():
                 node_name = yellow(node_name)
 
         AGE, AGE_HMS = get_age(i)
-        LINE=f"{type}{node_name:12s} { green( node_ip ) :24s} {AGE_HMS}\n"
+        LINE=f"   {node_name:8s} { green( node_ip ) :24s} {AGE_HMS}\n"
         op_lines.append({'age': AGE, 'line': LINE})
 
-    return sort_lines_by_age(op_lines, ages)
+    return type + sort_lines_by_age(op_lines, ages)
 
 def get_nodes():
     nodes = {}
