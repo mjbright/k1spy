@@ -621,6 +621,15 @@ def test_methods():
     print("\n---- [namespace='default'] Listing cron_jobs:")
     print_cron_jobs(namespace='default')
 
+def namespace_exists(namespace):
+    if namespace == "all": return True
+
+    ret = corev1.list_namespace(watch=False)
+    for i in ret.items:
+        if i.metadata.name == namespace:
+            return True
+    return False
+
 #test_methods()
 
 # Clears but keeps at bottom of screeen:
@@ -690,7 +699,13 @@ print(f'full_context={full_context}')
 last_op=''
 while True:
     op=''
-    full_context=f'{ bold_white("Context:") } { bold_green(context) } / { bold_white("Namespace:") } { bold_green(namespace) } / { bold_white("Resources:") } { bold_green(resources) }\n'
+    if namespace_exists(namespace):
+        ns_colour = bold_white("Namespace: ") + bold_green(namespace)
+    else:
+        ns_colour = bold_red("Namespace: " + namespace)
+
+    full_context=f'{ bold_white("Context:") } { bold_green(context) } / { ns_colour } / { bold_white("Resources:") } { bold_green(resources) }\n'
+
     op += full_context
     #op += f'{ bold_white("Resources:") } { bold_blue( " ".join(resources) ) }\n'
 
