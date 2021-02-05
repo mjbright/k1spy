@@ -56,13 +56,13 @@ contexts, active_context = config.list_kube_config_contexts()
 # {'context': {'cluster': 'kubernetes', 'namespace': 'k8scenario', 'user': 'kubernetes-admin'},
 #  'name': 'k8scenario'}
 
-default_namespace='default'
+DEFAULT_NAMESPACE='default'
 if 'namespace' in active_context['context']:
-    default_namespace=active_context['context']['namespace']
+    DEFAULT_NAMESPACE=active_context['context']['namespace']
 
 #print(active_context)
 context=active_context['name']
-print(f'context={context} namespace={default_namespace}')
+print(f'context={context} namespace={DEFAULT_NAMESPACE}')
 
 ## -- Get API clients: --------------------------------------------
 
@@ -81,7 +81,7 @@ BLUE = '\033[34m'
 MAGENTA = '\033[35m'
 CYAN = '\033[36m'
 WHITE = '\033[37m'
-UNDERline = '\033[4m'
+UNDERLINE = '\033[4m'
 RESET = '\033[0m'
 
 BOLD_BLACK = '\033[30;1m'
@@ -119,7 +119,7 @@ def white(msg):
     return f"{WHITE}{msg}{RESET}"
 def underline(msg):
     ''' return ansi-underlined 'msg' text'''
-    return f"{UNDERline}{msg}{RESET}"
+    return f"{UNDERLINE}{msg}{RESET}"
 def reset(msg):
     ''' reset ansi-colouring before 'msg' text'''
     return f"{RESET}{msg}{RESET}"
@@ -193,8 +193,8 @@ def set_hms(age_secs):
 
 def write_json(response, json_file):
     ''' Write dump json {response} to {json_file} '''
-    json_struct = json.dumps(response, indent=2)
-    Path(json_file).write_text(json_struct)
+    with open(json_file, "w") as write_file:
+        json.dump(response, write_file, indent=2)
 
 def write_json_items(items, file):
     ''' Write each json {item} to {file} '''
@@ -296,79 +296,6 @@ def get_nodes():
         node_name = i.metadata.name
         l_nodes[node_ip] = node_name
     return l_nodes
-
-'''
-NAME                      CAPACITY   ACCESS MODES   RECLAIM POLICY   STATUS      CLAIM                          STORAGECLASS   REASON   AGE
-persistentvolume/pv0001   100Gi      RWO            Retain           Available                                                          26m
-persistentvolume/pv0002   20Gi       RWX            Retain           Available                                                          7m47s
-persistentvolume/pv0003   4Gi        RWO            Retain           Bound       default/myclaim-1                                      7m46s
-persistentvolume/pv0004   100Gi      RWO            Retain           Bound       default/myclaim-2-large-slow   large-slow              7m7s
-persistentvolume/pv0005   10Gi       RWO            Retain           Available                                  small-fast              7m6s
-
-NAME                                         STATUS   VOLUME   CAPACITY   ACCESS MODES   STORAGECLASS   AGE
-persistentvolumeclaim/myclaim-1              Bound    pv0003   4Gi        RWO                           7m43s
-persistentvolumeclaim/myclaim-2-large-slow   Bound    pv0004   100Gi      RWO            large-slow     7m4s
-
-NAME                     READY   STATUS    RESTARTS   AGE
-pod/mypv-test            1/1     Running   0          7m42s
-pod/mypv-test-big-slow   0/1     Pending   0          7m2s
-
-{'api_version': None,
- 'metadata': { 'name': 'pv0001',
- 'spec': {'access_modes': ['ReadWriteOnce'], 'capacity': {'storage': '100Gi'},
-          'host_path': {'path': '/tmp/data01', 'type': ''}, 'persistent_volume_reclaim_policy': 'Retain', 'volume_mode': 'Filesystem',
- 'status': {'message': None, 'phase': 'Available', 'reason': None}}
-
-
-{'api_version': None,
- 'metadata': {'annotations': {'pv.kubernetes.io/bound-by-controller': 'yes'},
-              'creation_timestamp': datetime.datetime(2021, 1, 17, 22, 37, 2, tzinfo=tzlocal()),
-              'finalizers': ['kubernetes.io/pv-protection'],
-              'labels': {'type': 'local'},
-              'managed_fields': [{'api_version': 'v1',
-                                  'fields_type': 'FieldsV1',
-                                  'fields_v1': {'f:metadata': {'f:labels': {'.': {},
-                                                                            'f:type': {}}},
-                                                'f:spec': {'f:accessModes': {},
-                                                           'f:capacity': {'.': {},
-                                                                          'f:storage': {}},
-                                                           'f:hostPath': {'.': {},
-                                                                          'f:path': {},
-                                                                          'f:type': {}},
-                                                           'f:persistentVolumeReclaimPolicy': {},
-                                                           'f:volumeMode': {}}},
-                                  'manager': 'kubectl-create',
-                                  'operation': 'Update',
-                                  'time': datetime.datetime(2021, 1, 17, 22, 37, 2, tzinfo=tzlocal())},
-                                 {'api_version': 'v1',
-                                  'fields_type': 'FieldsV1',
-                                  'fields_v1': {'f:metadata': {'f:annotations': {'.': {},
-                                                                                 'f:pv.kubernetes.io/bound-by-controller': {}}},
-                                                'f:spec': {'f:claimRef': {'.': {},
-                                                                          'f:apiVersion': {},
-                                                                          'f:kind': {},
-                                                                          'f:name': {},
-                                                                          'f:namespace': {},
-                                                                          'f:resourceVersion': {},
-                                                                          'f:uid': {}}},
-                                                'f:status': {'f:phase': {}}},
-                                  'manager': 'kube-controller-manager',
-                                  'operation': 'Update',
-                                  'time': datetime.datetime(2021, 1, 17, 22, 37, 5, tzinfo=tzlocal())}],
-              'name': 'pv0003',
- 'spec': {'access_modes': ['ReadWriteOnce'],
-          'capacity': {'storage': '4Gi'},
-          'claim_ref': {'api_version': 'v1',
-                        'kind': 'PersistentVolumeClaim',
-                        'name': 'myclaim-1',
-                        'namespace': 'default',
-                        'resource_version': '84521',
-                        'uid': 'c1d9cb62-9e8f-4365-bbf0-c862dfe88016'},
-          'host_path': {'path': '/tmp/data03', 'type': ''},
-          'persistent_volume_reclaim_policy': 'Retain',
-          'volume_mode': 'Filesystem',
- 'status': {'message': None, 'phase': 'Bound', 'reason': None}}
-'''
 
 def print_pvs(p_namespace='all'):
     ''' print resource info '''
@@ -757,52 +684,52 @@ def sprint_cron_jobs(p_namespace='all'):
 def test_methods():
     ''' test print and sprintf methods '''
 
-    print("\n======== Listing nodes with their IPs:")
+    print("======== Listing nodes with their IPs:")
     print_nodes()
 
-    print("\n======== [all namespaces] Listing pods with their IPs:")
+    print("======== [all namespaces] Listing pods with their IPs:")
     print_pods()
-    print("\n---- [namespace='default'] Listing pods with their IPs:")
+    print("---- [namespace='default'] Listing pods with their IPs:")
     print_pods(p_namespace='default')
 
-    print("\n======== [all namespaces] Listing deployments:")
+    print("======== [all namespaces] Listing deployments:")
     print_deployments()
-    print("\n---- [namespace='default'] Listing deployments:")
+    print("---- [namespace='default'] Listing deployments:")
     print_deployments(p_namespace='default')
 
-    print("\n======== [all namespaces] Listing daemon_sets:")
+    print("======== [all namespaces] Listing daemon_sets:")
     print_daemon_sets()
-    print("\n---- [namespace='default'] Listing daemon_sets:")
+    print("---- [namespace='default'] Listing daemon_sets:")
     print_daemon_sets(p_namespace='default')
 
-    print("\n======== [all namespaces] Listing stateful_sets:")
+    print("======== [all namespaces] Listing stateful_sets:")
     print_stateful_sets()
-    print("\n---- [namespace='default'] Listing stateful_sets:")
+    print("---- [namespace='default'] Listing stateful_sets:")
     print_stateful_sets(p_namespace='default')
 
-    print("\n======== [all namespaces] Listing replica_sets:")
+    print("======== [all namespaces] Listing replica_sets:")
     print_replica_sets()
-    print("\n---- [namespace='default'] Listing replica_sets:")
+    print("---- [namespace='default'] Listing replica_sets:")
     print_replica_sets(p_namespace='default')
 
-    print("\n======== [all namespaces] Listing stateful_sets:")
+    print("======== [all namespaces] Listing stateful_sets:")
     print_stateful_sets()
-    print("\n---- [namespace='default'] Listing stateful_sets:")
+    print("---- [namespace='default'] Listing stateful_sets:")
     print_stateful_sets(p_namespace='default')
 
-    print("\n======== [all namespaces] Listing services:")
+    print("======== [all namespaces] Listing services:")
     print_services()
-    print("\n---- [namespace='default'] Listing services:")
+    print("---- [namespace='default'] Listing services:")
     print_services(p_namespace='default')
 
-    print("\n======== [all namespaces] Listing jobs:")
+    print("======== [all namespaces] Listing jobs:")
     print_jobs()
-    print("\n---- [namespace='default'] Listing jobs:")
+    print("---- [namespace='default'] Listing jobs:")
     print_jobs(p_namespace='default')
 
-    print("\n======== [all namespaces] Listing cron_jobs:")
+    print("======== [all namespaces] Listing cron_jobs:")
     print_cron_jobs()
-    print("\n---- [namespace='default'] Listing cron_jobs:")
+    print("---- [namespace='default'] Listing cron_jobs:")
     print_cron_jobs(p_namespace='default')
 
 def namespace_exists(p_namespace):
@@ -846,7 +773,7 @@ def main_setup(p_resources, p_namespace):
     ret_namespace=p_namespace
 
     if p_namespace is None:
-        ret_namespace=default_namespace
+        ret_namespace=DEFAULT_NAMESPACE
     if p_namespace == "-":
         ret_namespace="all"
 
@@ -993,3 +920,78 @@ nodes = get_nodes()
 if __name__ == "__main__":
     (resources, namespace) = main_setup(resources, namespace)
     main_loop()
+#
+# EXAMPLE OUTPUT & JSON:
+'''
+NAME                      CAPACITY   ACCESS MODES   RECLAIM POLICY   STATUS      CLAIM                          STORAGECLASS   REASON   AGE
+persistentvolume/pv0001   100Gi      RWO            Retain           Available                                                          26m
+persistentvolume/pv0002   20Gi       RWX            Retain           Available                                                          7m47s
+persistentvolume/pv0003   4Gi        RWO            Retain           Bound       default/myclaim-1                                      7m46s
+persistentvolume/pv0004   100Gi      RWO            Retain           Bound       default/myclaim-2-large-slow   large-slow              7m7s
+persistentvolume/pv0005   10Gi       RWO            Retain           Available                                  small-fast              7m6s
+
+NAME                                         STATUS   VOLUME   CAPACITY   ACCESS MODES   STORAGECLASS   AGE
+persistentvolumeclaim/myclaim-1              Bound    pv0003   4Gi        RWO                           7m43s
+persistentvolumeclaim/myclaim-2-large-slow   Bound    pv0004   100Gi      RWO            large-slow     7m4s
+
+NAME                     READY   STATUS    RESTARTS   AGE
+pod/mypv-test            1/1     Running   0          7m42s
+pod/mypv-test-big-slow   0/1     Pending   0          7m2s
+
+{'api_version': None,
+ 'metadata': { 'name': 'pv0001',
+ 'spec': {'access_modes': ['ReadWriteOnce'], 'capacity': {'storage': '100Gi'},
+          'host_path': {'path': '/tmp/data01', 'type': ''}, 'persistent_volume_reclaim_policy': 'Retain', 'volume_mode': 'Filesystem',
+ 'status': {'message': None, 'phase': 'Available', 'reason': None}}
+
+
+{'api_version': None,
+ 'metadata': {'annotations': {'pv.kubernetes.io/bound-by-controller': 'yes'},
+              'creation_timestamp': datetime.datetime(2021, 1, 17, 22, 37, 2, tzinfo=tzlocal()),
+              'finalizers': ['kubernetes.io/pv-protection'],
+              'labels': {'type': 'local'},
+              'managed_fields': [{'api_version': 'v1',
+                                  'fields_type': 'FieldsV1',
+                                  'fields_v1': {'f:metadata': {'f:labels': {'.': {},
+                                                                            'f:type': {}}},
+                                                'f:spec': {'f:accessModes': {},
+                                                           'f:capacity': {'.': {},
+                                                                          'f:storage': {}},
+                                                           'f:hostPath': {'.': {},
+                                                                          'f:path': {},
+                                                                          'f:type': {}},
+                                                           'f:persistentVolumeReclaimPolicy': {},
+                                                           'f:volumeMode': {}}},
+                                  'manager': 'kubectl-create',
+                                  'operation': 'Update',
+                                  'time': datetime.datetime(2021, 1, 17, 22, 37, 2, tzinfo=tzlocal())},
+                                 {'api_version': 'v1',
+                                  'fields_type': 'FieldsV1',
+                                  'fields_v1': {'f:metadata': {'f:annotations': {'.': {},
+                                                                                 'f:pv.kubernetes.io/bound-by-controller': {}}},
+                                                'f:spec': {'f:claimRef': {'.': {},
+                                                                          'f:apiVersion': {},
+                                                                          'f:kind': {},
+                                                                          'f:name': {},
+                                                                          'f:namespace': {},
+                                                                          'f:resourceVersion': {},
+                                                                          'f:uid': {}}},
+                                                'f:status': {'f:phase': {}}},
+                                  'manager': 'kube-controller-manager',
+                                  'operation': 'Update',
+                                  'time': datetime.datetime(2021, 1, 17, 22, 37, 5, tzinfo=tzlocal())}],
+              'name': 'pv0003',
+ 'spec': {'access_modes': ['ReadWriteOnce'],
+          'capacity': {'storage': '4Gi'},
+          'claim_ref': {'api_version': 'v1',
+                        'kind': 'PersistentVolumeClaim',
+                        'name': 'myclaim-1',
+                        'namespace': 'default',
+                        'resource_version': '84521',
+                        'uid': 'c1d9cb62-9e8f-4365-bbf0-c862dfe88016'},
+          'host_path': {'path': '/tmp/data03', 'type': ''},
+          'persistent_volume_reclaim_policy': 'Retain',
+          'volume_mode': 'Filesystem',
+ 'status': {'message': None, 'phase': 'Bound', 'reason': None}}
+'''
+
