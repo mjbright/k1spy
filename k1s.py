@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
 
+'''
+    TUI dashboard for Kubernetes resources
+    Example of use of kubernetes python module
+'''
+
 import os
 import sys
 import time
@@ -826,9 +831,9 @@ def cls():
     ''' clear screen '''
     sys.stdout.write('\033[H\033[J')
 
-def main_setup(resources, namespace):
+def main_setup(p_resources, p_namespace):
     final_resources=[]
-    for reslist in resources:
+    for reslist in p_resources:
         if "," in reslist:
             resource_list = reslist.split(",")
             final_resources.extend(resource_list)
@@ -838,9 +843,10 @@ def main_setup(resources, namespace):
 
     resources=final_resources
 
-    if namespace is None:
+    namespace=p_namespace
+    if p_namespace is None:
         namespace=default_namespace
-    if namespace == "-":
+    if p_namespace == "-":
         namespace="all"
 
     if len(resources) == 0:
@@ -862,65 +868,7 @@ def main_loop():
         nodes = get_nodes()
 
         for resource in resources:
-            match=False
-
-            if resource.find("no") == 0:
-                match=True
-                output+=sprint_nodes()
-
-            if resource.find("all") == 0 or resource.find("nall") == 0:
-                match=True
-                if resource.find("nall") == 0:
-                    output+=sprint_nodes()
-                output+=sprint_services(namespace)
-                output+=sprint_deployments(namespace)
-                output+=sprint_replica_sets(namespace)
-                output+=sprint_stateful_sets(namespace)
-                output+=sprint_pods(namespace)
-                output+=sprint_jobs(namespace)
-                output+=sprint_cron_jobs(namespace)
-                output+=sprint_pvs(namespace)
-                output+=sprint_pvcs(namespace)
-
-            if resource.find("svc") == 0 or resource.find("service") == 0:
-                match=True
-                output+=sprint_services(namespace)
-
-            if resource.find("dep") == 0:
-                match=True
-                output+=sprint_deployments(namespace)
-
-            if resource.find("ds") == 0 or resource.find("dset") == 0 or resource.find("daemonset") == 0:
-                match=True
-                output+=sprint_daemon_sets(namespace)
-
-            if resource.find("rs") == 0 or resource.find("replicaset") == 0:
-                match=True
-                output+=sprint_replica_sets(namespace)
-
-            if resource.find("ss") == 0 or resource.find("sts") == 0:
-                match=True
-                output+=sprint_stateful_sets(namespace)
-
-            if resource.find("po") == 0:
-                match=True
-                output+=sprint_pods(namespace)
-
-            if resource.find("job") == 0:
-                match=True
-                output+=sprint_jobs(namespace)
-            if resource.find("cj") == 0 or resource.find("cron") == 0:
-                match=True
-                output+=sprint_cron_jobs(namespace)
-            if resource.find("pvc") == 0:
-                match=True
-                output+=sprint_pvcs(namespace)
-            if resource.find("pv") == 0:
-                match=True
-                output+=sprint_pvs(namespace)
-
-            if not match:
-                die(f"No match for resource type '{resource}'")
+            output += sprint_resource(resource)
 
         if output != last_output:
             cls()
@@ -928,6 +876,50 @@ def main_loop():
             last_output = output
 
         time.sleep(0.5)     # Sleep for 500 milliseconds
+
+def sprint_resource(resource):
+    if resource.find("no") == 0:
+        return sprint_nodes()
+
+    if resource.find("all") == 0 or resource.find("nall") == 0:
+        output = ''
+        if resource.find("nall") == 0:
+            output=sprint_nodes()
+        output+=sprint_services(namespace)
+        output+=sprint_deployments(namespace)
+        output+=sprint_replica_sets(namespace)
+        output+=sprint_stateful_sets(namespace)
+        output+=sprint_pods(namespace)
+        output+=sprint_jobs(namespace)
+        output+=sprint_cron_jobs(namespace)
+        output+=sprint_pvs(namespace)
+        output+=sprint_pvcs(namespace)
+        return output
+
+    if resource.find("svc") == 0 or resource.find("service") == 0:
+        return sprint_services(namespace)
+    if resource.find("dep") == 0:
+        return sprint_deployments(namespace)
+    if resource.find("ds") == 0 or resource.find("dset") == 0 or resource.find("daemonset") == 0:
+        return sprint_daemon_sets(namespace)
+    if resource.find("rs") == 0 or resource.find("replicaset") == 0:
+        return sprint_replica_sets(namespace)
+    if resource.find("ss") == 0 or resource.find("sts") == 0:
+        return sprint_stateful_sets(namespace)
+    if resource.find("po") == 0:
+        return sprint_pods(namespace)
+    if resource.find("job") == 0:
+        return sprint_jobs(namespace)
+    if resource.find("cj") == 0 or resource.find("cron") == 0:
+        return sprint_cron_jobs(namespace)
+    if resource.find("pvc") == 0:
+        return sprint_pvcs(namespace)
+    if resource.find("pv") == 0:
+        return sprint_pvs(namespace)
+
+    die(f"No match for resource type '{resource}'")
+
+    return output
 
 ## -- Args: ----------------------------------------------------
 
