@@ -354,8 +354,8 @@ def sprint_pods(p_namespace='all'):
 
     return (res_type + sort_lines_by_age(op_lines)).rstrip()
 
-def get_pod_info(i, res_type, p_namespace='all'):
-    ''' Obtain pod_info as a line and age from instance '''
+def get_pod_host_info(i):
+    ''' Get pod_ip and coloured host name (yellow if master node) '''
     pod_ip        = i.status.pod_ip
     host_ip       = i.status.host_ip
     host          = host_ip
@@ -370,6 +370,10 @@ def get_pod_info(i, res_type, p_namespace='all'):
         if host.find("ma") == 0:
             host=cyan(host) # Colour master nodes
 
+    return(pod_ip, host)
+
+def get_pod_status(i):
+    ''' Obtain pod_status: desired/actual containers and status '''
     phase=i.status.phase
     is_ready=False
     is_scheduled=False
@@ -386,54 +390,61 @@ def get_pod_info(i, res_type, p_namespace='all'):
                     if ctype == 'PodScheduled' and cstatus == "True":
                         is_scheduled=True
 
-    info=''
+    ret_status=''
     if is_scheduled and (not is_ready):
         try:
             container0 = status['container_statuses'][0] # !!
-            info=container0['state']['terminated']['reason']
+            ret_status=container0['state']['terminated']['reason']
         except:
             try:
-                info=container0['state']['waiting']['reason']
+                ret_status=container0['state']['waiting']['reason']
             except:
-                info='NonReady'
+                ret_status='NonReady'
     else:
-        info=phase
+        ret_status=phase
 
     cexpected=0
     if 'container_statuses' in status:
         cexpected=len( status['container_statuses'] )
 
     cready=0
-    des_act=f'{cready}/{cexpected}'
+    desired_actual_c=f'{cready}/{cexpected}'
 
     if is_scheduled and is_ready:
         try:
             for cont_status in status['container_statuses']:
                 if 'ready' in cont_status and cont_status['ready']:
                     cready+=1
-            des_act=f'{cready}/{cexpected} '
+            desired_actual_c=f'{cready}/{cexpected} '
         except:
-            des_act=f'{cready}/{cexpected} '
+            desired_actual_c=f'{cready}/{cexpected} '
 
     if cready < cexpected:
-        des_act=yellow(des_act)
+        desired_actual_c=yellow(desired_actual_c)
 
-    if info == "Running":
-        info=green("Running")
+    if ret_status == "Running":
+        ret_status=green("Running")
 
-    if info == "Complete":
-        info=yellow("Running")
+    if ret_status == "Complete":
+        ret_status=yellow("Running")
 
     if hasattr(i.metadata,'deletion_timestamp'):
         if i.metadata.deletion_timestamp:
-            info = red("Terminating")
+            ret_status = red("Terminating")
 
+    return (desired_actual_c, ret_status)
+
+def get_pod_info(i, res_type, p_namespace='all'):
+    ''' Obtain pod_info as a line and age from instance '''
+
+    (pod_ip, host) = get_pod_host_info(i)
+    (desired_actual_c, pod_status) = get_pod_status(i)
     age, age_hms = get_age(i)
 
     if VERBOSE: # Checking for unset vars
         print(f"namespace={i.metadata.namespace:{NS_FMT}}")
         print(f"type/name={res_type}{i.metadata.name:{NAME_FMT}}")
-        print(f"info={info}")
+        print(f"pod_status={pod_status}")
         print(f"pod_ip/host={pod_ip:15s}/{host}\n")
         print(f"creation_time={i.metadata.creation_time}")
         print(f"age={age_hms}\n")
@@ -442,8 +453,8 @@ def get_pod_info(i, res_type, p_namespace='all'):
     if p_namespace == 'all':
         ns_info=f'[{i.metadata.namespace:{NS_FMT}}] '
 
-    pod_info = f'{pod_ip:15s}/{host:10s} {age_hms}'
-    line = f'  {ns_info} {i.metadata.name:{NAME_FMT}} {des_act} {info:20s} {pod_info}\n'
+    pod_host_age = f'{pod_ip:15s}/{host:10s} {age_hms}'
+    line = f'  {ns_info} {i.metadata.name:{NAME_FMT}} {desired_actual_c} {pod_status:20s} {pod_host_age}\n'
     return {'age': age, 'line': line}
 
 def print_deployments(p_namespace='all'):
