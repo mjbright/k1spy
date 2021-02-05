@@ -554,7 +554,8 @@ def sprint_daemon_sets(p_namespace='all'):
         ret = appsv1.list_daemon_set_for_all_namespaces(watch=False)
     else:
         ret = appsv1.list_namespaced_daemon_set(watch=False, namespace=p_namespace)
-    if len(ret.items) == 0: return ''
+    if len(ret.items) == 0:
+        return ''
     write_json_items(ret.items, TMP_DIR + '/dsetsN.json')
 
     op_lines=[]
@@ -565,7 +566,7 @@ def sprint_daemon_sets(p_namespace='all'):
         if p_namespace == 'all':
             ns_info=f'[{i.metadata.namespace:{NS_FMT}}] '
 
-        line = f"  {ns_info} {i.metadata.name:{NAME_FMT}}\n"
+        line = f"  {ns_info} {i.metadata.name:{NAME_FMT}} {age_hms}\n"
         op_lines.append({'age': age, 'line': line})
 
     return res_type + sort_lines_by_age(op_lines)
@@ -583,7 +584,8 @@ def sprint_stateful_sets(p_namespace='all'):
         ret = appsv1.list_stateful_set_for_all_namespaces(watch=False)
     else:
         ret = appsv1.list_namespaced_stateful_set(watch=False, namespace=p_namespace)
-    if len(ret.items) == 0: return ''
+    if len(ret.items) == 0:
+        return ''
     write_json_items(ret.items, TMP_DIR + '/ssetsN.json')
 
     op_lines=[]
@@ -613,7 +615,8 @@ def sprint_replica_sets(p_namespace='all'):
         ret = appsv1.list_replica_set_for_all_namespaces(watch=False)
     else:
         ret = appsv1.list_namespaced_replica_set(watch=False, namespace=p_namespace)
-    if len(ret.items) == 0: return ''
+    if len(ret.items) == 0:
+        return ''
     write_json_items(ret.items, TMP_DIR + '/repsetsN.json')
 
     op_lines=[]
@@ -643,39 +646,42 @@ def sprint_services(p_namespace='all'):
         ret = corev1.list_service_for_all_namespaces(watch=False)
     else:
         ret = corev1.list_namespaced_service(watch=False, namespace=p_namespace)
-    if len(ret.items) == 0: return ''
+    if len(ret.items) == 0:
+        return ''
     write_json_items(ret.items, TMP_DIR + '/servicesN.json')
 
     op_lines=[]
     for i in ret.items:
-        NPORT=""
+        port=""
         spec = i.spec.to_dict()
 
-        SVC_TYPE=spec['type']
-        EXT_IPS=spec['external_i_ps']
+        svc_type=spec['type']
+        ext_ips=spec['external_i_ps']
 
         # Needs checking, is it this field or load_balancer_ip ??
-        if not EXT_IPS: EXT_IPS='Pending'
+        if not ext_ips:
+            ext_ips='Pending'
 
         if spec and 'ports' in spec and spec['ports'] and 'node_port' in spec['ports'][0]:
             port0=spec['ports'][0]
             if 'node_port' in port0 and port0['node_port'] != None:
-                PORT=f" {port0['port']}:{port0['node_port']}"
+                port=f" {port0['port']}:{port0['node_port']}"
             else:
-                PORT=f" {port0['port']}"
-            PORT += f"/{port0['protocol']}"
+                port=f" {port0['port']}"
+            port += f"/{port0['protocol']}"
 
-        CIP=spec['cluster_ip']
-        if not CIP: CIP=''
+        cluster_ip=spec['cluster_ip']
+        if not cluster_ip:
+            cluster_ip=''
 
-        POLICY=""
+        policy=""
         age, age_hms = get_age(i)
 
         ns_info=''
         if p_namespace == 'all':
             ns_info=f'[{i.metadata.namespace:{NS_FMT}}] '
 
-        svc_info = f'{CIP:14s} {SVC_TYPE:12s} {EXT_IPS:15s} {PORT:14s}{POLICY:8s} {age_hms}'
+        svc_info = f'{cluster_ip:14s} {svc_type:12s} {ext_ips:15s} {port:14s}{policy:8s} {age_hms}'
         line = f'  {ns_info} {i.metadata.name:{NAME_FMT}} {svc_info}\n'
         op_lines.append({'age': age, 'line': line})
 
@@ -694,7 +700,8 @@ def sprint_jobs(p_namespace='all'):
         ret = batchv1.list_job_for_all_namespaces(watch=False)
     else:
         ret = batchv1.list_namespaced_job(watch=False, namespace=p_namespace)
-    if len(ret.items) == 0: return ''
+    if len(ret.items) == 0:
+        return ''
     write_json_items(ret.items, TMP_DIR + '/jobsN.json')
 
     op_lines=[]
@@ -723,7 +730,8 @@ def sprint_cron_jobs(p_namespace='all'):
         ret = batchv1beta1.list_cron_job_for_all_namespaces(watch=False)
     else:
         ret = batchv1beta1.list_namespaced_cron_job(watch=False, namespace=p_namespace)
-    if len(ret.items) == 0: return ''
+    if len(ret.items) == 0:
+        return ''
     write_json_items(ret.items, TMP_DIR + '/cronjobsN.json')
 
     op_lines=[]
@@ -791,7 +799,8 @@ def test_methods():
     print_cron_jobs(namespace='default')
 
 def namespace_exists(namespace):
-    if namespace == "all": return True
+    if namespace == "all":
+        return True
 
     ret = corev1.list_namespace(watch=False)
     for i in ret.items:
@@ -809,7 +818,8 @@ def build_context_namespace_resources_info(context, namespace, resources):
 
     return f'{ p_context } / { p_namespace } / { p_resources }'
 
-def cls(): sys.stdout.write('\033[H\033[J')
+def cls():
+    sys.stdout.write('\033[H\033[J')
 
 ## -- Args: ----------------------------------------------------
 
@@ -820,12 +830,22 @@ resources=[]
 while a <= (len(sys.argv)-1):
     arg=sys.argv[a]
     a+=1
-    if arg == "-st":            SHOW_TYPES=True;  continue
-    if arg == "-show-types":    SHOW_TYPES=True;  continue
-    if arg == "-nst":           SHOW_TYPES=False; continue
-    if arg == "-no-show-types": SHOW_TYPES=False; continue
+    if arg == "-st":
+        SHOW_TYPES=True
+        continue
+    if arg == "-show-types":
+        SHOW_TYPES=True
+        continue
+    if arg == "-nst":
+        SHOW_TYPES=False
+        continue
+    if arg == "-no-show-types":
+        SHOW_TYPES=False
+        continue
 
-    if arg == "-v": VERBOSE=True; continue
+    if arg == "-v":
+        VERBOSE=True
+        continue
 
     if arg == "-test":
         test_methods()
