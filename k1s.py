@@ -372,9 +372,8 @@ def get_pod_host_info(i):
 
     return(pod_ip, host)
 
-def get_pod_status(i):
-    ''' Obtain pod_status: desired/actual containers and status '''
-    phase=i.status.phase
+def get_pod_scheduling_status(i):
+    ''' Obtain pod_scheduling_status: from conditions '''
     is_ready=False
     is_scheduled=False
 
@@ -390,18 +389,12 @@ def get_pod_status(i):
                     if ctype == 'PodScheduled' and cstatus == "True":
                         is_scheduled=True
 
-    ret_status=''
-    if is_scheduled and (not is_ready):
-        try:
-            container0 = status['container_statuses'][0] # !!
-            ret_status=container0['state']['terminated']['reason']
-        except:
-            try:
-                ret_status=container0['state']['waiting']['reason']
-            except:
-                ret_status='NonReady'
-    else:
-        ret_status=phase
+
+    desired_actual_c = get_pod_desired_actual(status, is_ready, is_scheduled)
+    return (status, is_ready, is_scheduled, desired_actual_c)
+
+def get_pod_desired_actual(status, is_ready, is_scheduled):
+    ''' Obtain desired/actual containers '''
 
     cexpected=0
     if 'container_statuses' in status:
@@ -421,6 +414,27 @@ def get_pod_status(i):
 
     if cready < cexpected:
         desired_actual_c=yellow(desired_actual_c)
+
+    return desired_actual_c
+
+def get_pod_status(i):
+    ''' Obtain pod_status: desired/actual containers and status '''
+    phase=i.status.phase
+
+    ret_status=''
+    ( status, is_ready, is_scheduled, desired_actual_c ) = get_pod_scheduling_status(i)
+
+    if is_scheduled and (not is_ready):
+        try:
+            container0 = status['container_statuses'][0] # !!
+            ret_status=container0['state']['terminated']['reason']
+        except:
+            try:
+                ret_status=container0['state']['waiting']['reason']
+            except:
+                ret_status='NonReady'
+    else:
+        ret_status=phase
 
     if ret_status == "Running":
         ret_status=green("Running")
@@ -454,7 +468,8 @@ def get_pod_info(i, res_type, p_namespace='all'):
         ns_info=f'[{i.metadata.namespace:{NS_FMT}}] '
 
     pod_host_age = f'{pod_ip:15s}/{host:10s} {age_hms}'
-    line = f'  {ns_info} {i.metadata.name:{NAME_FMT}} {desired_actual_c} {pod_status:20s} {pod_host_age}\n'
+    pod_info = f'{pod_status:20s} {pod_host_age}'
+    line = f'  {ns_info} {i.metadata.name:{NAME_FMT}} {desired_actual_c} {pod_info}\n'
     return {'age': age, 'line': line}
 
 def print_deployments(p_namespace='all'):
@@ -839,33 +854,37 @@ def sprint_all_resources(resource):
 
 def sprint_resource(resource):
     ''' Build up output for 'resource' type '''
-    if resource.find("no") == 0:
-        return sprint_nodes()
-    if resource.find("all") == 0 or resource.find("nall") == 0:
-        return sprint_all_resources(resource)
-    if resource.find("svc") == 0 or resource.find("service") == 0:
-        return sprint_services(namespace)
-    if resource.find("dep") == 0:
-        return sprint_deployments(namespace)
-    if resource.find("ds") == 0 or resource.find("dset") == 0 or resource.find("daemonset") == 0:
-        return sprint_daemon_sets(namespace)
-    if resource.find("rs") == 0 or resource.find("replicaset") == 0:
-        return sprint_replica_sets(namespace)
-    if resource.find("ss") == 0 or resource.find("sts") == 0:
-        return sprint_stateful_sets(namespace)
-    if resource.find("po") == 0:
-        return sprint_pods(namespace)
-    if resource.find("job") == 0:
-        return sprint_jobs(namespace)
-    if resource.find("cj") == 0 or resource.find("cron") == 0:
-        return sprint_cron_jobs(namespace)
-    if resource.find("pvc") == 0:
-        return sprint_pvcs(namespace)
-    if resource.find("pv") == 0:
-        return sprint_pvs(namespace)
+    retstr = None
 
-    die(f"No match for resource type '{resource}'")
-    return None # To satisfy pylint
+    if resource.find("no") == 0:
+        retstr = sprint_nodes()
+    if resource.find("all") == 0 or resource.find("nall") == 0:
+        retstr = sprint_all_resources(resource)
+    if resource.find("svc") == 0 or resource.find("service") == 0:
+        retstr = sprint_services(namespace)
+    if resource.find("dep") == 0:
+        retstr = sprint_deployments(namespace)
+    if resource.find("ds") == 0 or resource.find("dset") == 0 or resource.find("daemonset") == 0:
+        retstr = sprint_daemon_sets(namespace)
+    if resource.find("rs") == 0 or resource.find("replicaset") == 0:
+        retstr = sprint_replica_sets(namespace)
+    if resource.find("ss") == 0 or resource.find("sts") == 0:
+        retstr = sprint_stateful_sets(namespace)
+    if resource.find("po") == 0:
+        retstr = sprint_pods(namespace)
+    if resource.find("job") == 0:
+        retstr = sprint_jobs(namespace)
+    if resource.find("cj") == 0 or resource.find("cron") == 0:
+        retstr = sprint_cron_jobs(namespace)
+    if resource.find("pvc") == 0:
+        retstr = sprint_pvcs(namespace)
+    if resource.find("pv") == 0:
+        retstr = sprint_pvs(namespace)
+
+    if retstr is None:
+        die(f"No match for resource type '{resource}'")
+
+    return retstr
 
 ## -- Args: ----------------------------------------------------
 
