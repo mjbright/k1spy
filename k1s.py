@@ -297,9 +297,9 @@ def get_nodes():
         l_nodes[node_ip] = node_name
     return l_nodes
 
-def print_pvs(p_namespace='all'):
+def print_pvcs(p_namespace='all'):
     ''' print resource info '''
-    print(sprint_pvs(p_namespace))
+    print(sprint_pvcs(p_namespace))
 
 def sprint_pvcs(p_namespace):
     ''' build single-line representing resource info '''
@@ -314,21 +314,88 @@ def sprint_pvcs(p_namespace):
 
     write_json_items(ret.items, TMP_DIR + '/pvcsN.json')
 
-    return res_type + ''
+    max_name_len=5
+    for i in ret.items:
+        if len(i.metadata.name) > max_name_len:
+            max_name_len=len(i.metadata.name)
 
-def print_pvcs(p_namespace='all'):
+    name_fmt=f'{max_name_len+1}s'
+
+    op_lines=[]
+    for i in ret.items:
+        age, age_hms = get_age(i)
+
+        ns_info=''
+        if p_namespace == 'all':
+            ns_info=f'[{i.metadata.namespace:{NS_FMT}}] '
+
+        access_modes=",".join(i.status.access_modes)
+
+        #print(i.spec)
+        line = f'  {ns_info} {i.metadata.name:{name_fmt}} {i.status.capacity["storage"]:6s} {access_modes} {i.status.phase:10s} {age_hms}\n'
+
+        op_lines.append( {'age': age, 'line': line} )
+
+    return res_type + sort_lines_by_age(op_lines)
+    #return (res_type + sort_lines_by_age(op_lines)).rstrip()
+
+'''
+    NAME                              STATUS   VOLUME   CAPACITY   ACCESS MODES   STORAGECLASS   AGE
+    persistentvolumeclaim/myclaim-1   Bound    pv0003   4Gi        RWO                           10m
+'''
+
+def print_pvs(p_namespace='all'):
     ''' print resource info '''
-    print(sprint_pvcs(p_namespace))
+    print(sprint_pvs(p_namespace))
 
 def sprint_pvs(p_namespace):
     ''' build single-line representing resource info '''
     res_type =  'persistentvolumes:' if SHOW_TYPES else ''
     ret = corev1.list_persistent_volume(watch=False)
+
     if len(ret.items) == 0:
         return ''
+
     write_json_items(ret.items, TMP_DIR + '/pvsN.json')
 
-    return res_type + '' + p_namespace
+    max_name_len=5
+    max_claim_len=5
+    for i in ret.items:
+        if len(i.metadata.name) > max_name_len:
+            max_name_len=len(i.metadata.name)
+        if i.spec.claim_ref:
+            claimRef=i.spec.claim_ref
+            claim=f'{claimRef.namespace}/{claimRef.name}'
+            if len(claim) > max_claim_len:
+                max_claim_len=len(claim)
+
+    name_fmt=f'{max_name_len+1}s'
+    name_claim_fmt=f'{max_claim_len+1}s'
+
+    op_lines=[]
+    for i in ret.items:
+        age, age_hms = get_age(i)
+
+        ns_info=''
+        if p_namespace == 'all':
+            ns_info=f'[{i.metadata.namespace:{NS_FMT}}] '
+
+        #print(i.spec)
+        policy=i.spec.persistent_volume_reclaim_policy
+        access_modes=",".join(i.spec.access_modes)
+
+        #line = f'  {ns_info} {i.metadata.name:{NAME_FMT}} {i.spec.capacity.storage} {i.spec.accessModes} {i.status.phase} {i.spec.persistentVolumeReclaimPolicy}\n'
+
+        claim=''
+        if i.spec.claim_ref:
+            claimRef=i.spec.claim_ref
+            claim=f'{claimRef.namespace}/{claimRef.name}'
+
+        line = f'  {ns_info} {i.metadata.name:{name_fmt}} {i.spec.capacity["storage"]:6s} {access_modes} {i.status.phase:10s} {claim:{name_claim_fmt}} {policy} {age_hms}\n'
+        op_lines.append( {'age': age, 'line': line} )
+
+    return res_type + sort_lines_by_age(op_lines)
+    #return (res_type + sort_lines_by_age(op_lines)).rstrip()
 
 def print_pods(p_namespace='all'):
     ''' print resource info '''
@@ -470,6 +537,7 @@ def get_pod_info(i, res_type, p_namespace='all'):
     pod_host_age = f'{pod_ip:15s}/{host:10s} {age_hms}'
     pod_info = f'{pod_status:20s} {pod_host_age}'
     line = f'  {ns_info} {i.metadata.name:{NAME_FMT}} {desired_actual_c} {pod_info}\n'
+
     return {'age': age, 'line': line}
 
 def print_deployments(p_namespace='all'):
@@ -878,7 +946,8 @@ def sprint_resource(resource):
         retstr = sprint_cron_jobs(namespace)
     if resource.find("pvc") == 0:
         retstr = sprint_pvcs(namespace)
-    if resource.find("pv") == 0:
+    #if resource.find("pv") == 0:
+    if resource == "pv":
         retstr = sprint_pvs(namespace)
 
     if retstr is None:
