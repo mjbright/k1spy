@@ -877,25 +877,26 @@ def main_loop():
 
         time.sleep(0.5)     # Sleep for 500 milliseconds
 
+def sprint_all_resources(resource):
+    output = ''
+    if resource.find("nall") == 0:
+        output=sprint_nodes()
+    output+=sprint_services(namespace)
+    output+=sprint_deployments(namespace)
+    output+=sprint_replica_sets(namespace)
+    output+=sprint_stateful_sets(namespace)
+    output+=sprint_pods(namespace)
+    output+=sprint_jobs(namespace)
+    output+=sprint_cron_jobs(namespace)
+    output+=sprint_pvs(namespace)
+    output+=sprint_pvcs(namespace)
+    return output
+
 def sprint_resource(resource):
     if resource.find("no") == 0:
         return sprint_nodes()
-
     if resource.find("all") == 0 or resource.find("nall") == 0:
-        output = ''
-        if resource.find("nall") == 0:
-            output=sprint_nodes()
-        output+=sprint_services(namespace)
-        output+=sprint_deployments(namespace)
-        output+=sprint_replica_sets(namespace)
-        output+=sprint_stateful_sets(namespace)
-        output+=sprint_pods(namespace)
-        output+=sprint_jobs(namespace)
-        output+=sprint_cron_jobs(namespace)
-        output+=sprint_pvs(namespace)
-        output+=sprint_pvcs(namespace)
-        return output
-
+        return sprint_all_resources(resource)
     if resource.find("svc") == 0 or resource.find("service") == 0:
         return sprint_services(namespace)
     if resource.find("dep") == 0:
@@ -918,8 +919,6 @@ def sprint_resource(resource):
         return sprint_pvs(namespace)
 
     die(f"No match for resource type '{resource}'")
-
-    return output
 
 ## -- Args: ----------------------------------------------------
 
