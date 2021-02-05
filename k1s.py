@@ -9,13 +9,15 @@ import json
 
 from kubernetes import client, config
 
-SHOW_TYPES=True
-
-VERBOSE=False
-
 NAME_FMT="32s"
 INFO_FMT="60s"
 NS_FMT="15s"
+
+SHOW_TYPES=False
+VERBOSE=False
+nodes=[]
+resources=[]
+namespace='default'
 
 #default_resources=["pods"]
 default_resources=["all"]
@@ -824,155 +826,172 @@ def cls():
     ''' clear screen '''
     sys.stdout.write('\033[H\033[J')
 
+def main_setup(resources, namespace):
+    final_resources=[]
+    for reslist in resources:
+        if "," in reslist:
+            resource_list = reslist.split(",")
+            final_resources.extend(resource_list)
+        else:
+            resource_list = reslist
+            final_resources.append(resource_list)
+
+    resources=final_resources
+
+    if namespace is None:
+        namespace=default_namespace
+    if namespace == "-":
+        namespace="all"
+
+    if len(resources) == 0:
+        resources = default_resources
+
+    return (resources, namespace)
+
+def main_loop():
+    full_context = build_context_namespace_resources_info(context, namespace, resources)
+    print(f'full_context={full_context}\n')
+
+    last_output=''
+    while True:
+        output=''
+
+        full_context = build_context_namespace_resources_info(context, namespace, resources)
+        output += full_context + '\n'
+
+        nodes = get_nodes()
+
+        for resource in resources:
+            match=False
+
+            if resource.find("no") == 0:
+                match=True
+                output+=sprint_nodes()
+
+            if resource.find("all") == 0 or resource.find("nall") == 0:
+                match=True
+                if resource.find("nall") == 0:
+                    output+=sprint_nodes()
+                output+=sprint_services(namespace)
+                output+=sprint_deployments(namespace)
+                output+=sprint_replica_sets(namespace)
+                output+=sprint_stateful_sets(namespace)
+                output+=sprint_pods(namespace)
+                output+=sprint_jobs(namespace)
+                output+=sprint_cron_jobs(namespace)
+                output+=sprint_pvs(namespace)
+                output+=sprint_pvcs(namespace)
+
+            if resource.find("svc") == 0 or resource.find("service") == 0:
+                match=True
+                output+=sprint_services(namespace)
+
+            if resource.find("dep") == 0:
+                match=True
+                output+=sprint_deployments(namespace)
+
+            if resource.find("ds") == 0 or resource.find("dset") == 0 or resource.find("daemonset") == 0:
+                match=True
+                output+=sprint_daemon_sets(namespace)
+
+            if resource.find("rs") == 0 or resource.find("replicaset") == 0:
+                match=True
+                output+=sprint_replica_sets(namespace)
+
+            if resource.find("ss") == 0 or resource.find("sts") == 0:
+                match=True
+                output+=sprint_stateful_sets(namespace)
+
+            if resource.find("po") == 0:
+                match=True
+                output+=sprint_pods(namespace)
+
+            if resource.find("job") == 0:
+                match=True
+                output+=sprint_jobs(namespace)
+            if resource.find("cj") == 0 or resource.find("cron") == 0:
+                match=True
+                output+=sprint_cron_jobs(namespace)
+            if resource.find("pvc") == 0:
+                match=True
+                output+=sprint_pvcs(namespace)
+            if resource.find("pv") == 0:
+                match=True
+                output+=sprint_pvs(namespace)
+
+            if not match:
+                die(f"No match for resource type '{resource}'")
+
+        if output != last_output:
+            cls()
+            print(output)
+            last_output = output
+
+        time.sleep(0.5)     # Sleep for 500 milliseconds
+
 ## -- Args: ----------------------------------------------------
 
-arg_idx=1
-namespace=None
-resources=[]
+def parse_args():
+    ''' Parse command-line arguments '''
+    arg_idx=1
+    args_namespace=None
+    args_resources=[]
+    args_show_types=True
+    args_verbose=False
 
-while arg_idx <= (len(sys.argv)-1):
-    arg=sys.argv[arg_idx]
-    arg_idx+=1
-    if arg == "-st":
-        SHOW_TYPES=True
-        continue
-    if arg == "-show-types":
-        SHOW_TYPES=True
-        continue
-    if arg == "-nst":
-        SHOW_TYPES=False
-        continue
-    if arg == "-no-show-types":
-        SHOW_TYPES=False
-        continue
-
-    if arg == "-v":
-        VERBOSE=True
-        continue
-
-    if arg == "-test":
-        nodes = get_nodes()
-        test_methods()
-        sys.exit(0)
-
-    if arg == "-slow":
-        # Slow changing resources:
-        resources = [ 'node', 'svc', 'deploy', 'ds', 'rs', 'ss' ]
-        continue
-
-    if arg == "-A":
-        namespace="-"
-        continue
-
-    if arg == "-n":
-        namespace=sys.argv[arg_idx]
+    while arg_idx <= (len(sys.argv)-1):
+        arg=sys.argv[arg_idx]
         arg_idx+=1
-        continue
+        if arg == "-st":
+            args_show_types=True
+            continue
+        if arg == "-show-types":
+            args_show_types=True
+            continue
+        if arg == "-nst":
+            args_show_types=False
+            continue
+        if arg == "-no-show-types":
+            args_show_types=False
+            continue
 
-    if arg == "-r":
-        resources.append(sys.argv[arg_idx])
-        arg_idx+=1
-        continue
+        if arg == "-v":
+            args_verbose=True
+            continue
 
-    resources.append( arg )
+        if arg == "-test":
+            test_methods()
+            sys.exit(0)
+
+        if arg == "-slow":
+            # Slow changing resources:
+            args_resources = [ 'node', 'svc', 'deploy', 'ds', 'rs', 'ss' ]
+            continue
+
+        if arg == "-A":
+            args_namespace="-"
+            continue
+
+        if arg == "-n":
+            args_namespace=sys.argv[arg_idx]
+            arg_idx+=1
+            continue
+
+        if arg == "-r":
+            args_resources.append(sys.argv[arg_idx])
+            arg_idx+=1
+            continue
+
+        args_resources.append( arg )
+
+    return (args_namespace, args_resources, args_show_types, args_verbose)
 
 ## -- Main: ----------------------------------------------------
 
-final_resources=[]
-for reslist in resources:
-    if "," in reslist:
-        resource_list = reslist.split(",")
-        final_resources.extend(resource_list)
-    else:
-        resource_list = reslist
-        final_resources.append(resource_list)
+(namespace, resources, SHOW_TYPES, VERBOSE)=parse_args()
 
-resources=final_resources
+nodes = get_nodes()
 
-if namespace is None:
-    namespace=default_namespace
-if namespace == "-":
-    namespace="all"
-
-if len(resources) == 0:
-    resources = default_resources
-
-full_context = build_context_namespace_resources_info(context, namespace, resources)
-print(f'full_context={full_context}\n')
-
-last_output=''
-while True:
-    output=''
-
-    full_context = build_context_namespace_resources_info(context, namespace, resources)
-    output += full_context + '\n'
-
-    nodes = get_nodes()
-
-    for resource in resources:
-        match=False
-
-        if resource.find("no") == 0:
-            match=True
-            output+=sprint_nodes()
-
-        if resource.find("all") == 0 or resource.find("nall") == 0:
-            match=True
-            if resource.find("nall") == 0:
-                output+=sprint_nodes()
-            output+=sprint_services(namespace)
-            output+=sprint_deployments(namespace)
-            output+=sprint_replica_sets(namespace)
-            output+=sprint_stateful_sets(namespace)
-            output+=sprint_pods(namespace)
-            output+=sprint_jobs(namespace)
-            output+=sprint_cron_jobs(namespace)
-            output+=sprint_pvs(namespace)
-            output+=sprint_pvcs(namespace)
-
-        if resource.find("svc") == 0 or resource.find("service") == 0:
-            match=True
-            output+=sprint_services(namespace)
-
-        if resource.find("dep") == 0:
-            match=True
-            output+=sprint_deployments(namespace)
-
-        if resource.find("ds") == 0 or resource.find("dset") == 0 or resource.find("daemonset") == 0:
-            match=True
-            output+=sprint_daemon_sets(namespace)
-
-        if resource.find("rs") == 0 or resource.find("replicaset") == 0:
-            match=True
-            output+=sprint_replica_sets(namespace)
-
-        if resource.find("ss") == 0 or resource.find("sts") == 0:
-            match=True
-            output+=sprint_stateful_sets(namespace)
-
-        if resource.find("po") == 0:
-            match=True
-            output+=sprint_pods(namespace)
-
-        if resource.find("job") == 0:
-            match=True
-            output+=sprint_jobs(namespace)
-        if resource.find("cj") == 0 or resource.find("cron") == 0:
-            match=True
-            output+=sprint_cron_jobs(namespace)
-        if resource.find("pvc") == 0:
-            match=True
-            output+=sprint_pvcs(namespace)
-        if resource.find("pv") == 0:
-            match=True
-            output+=sprint_pvs(namespace)
-
-        if not match:
-            die(f"No match for resource type '{resource}'")
-
-    if output != last_output:
-        cls()
-        print(output)
-        last_output = output
-
-    time.sleep(0.5)     # Sleep for 500 milliseconds
+if __name__ == "__main__":
+    (resources, namespace) = main_setup(resources, namespace)
+    main_loop()
