@@ -1,0 +1,17 @@
+# EXAMPLE OUTPUT & JSON:
+
+NAME                      CAPACITY   ACCESS MODES   RECLAIM POLICY   STATUS      CLAIM                          STORAGECLASS   REASON   AGE
+persistentvolume/pv0001   100Gi      RWO            Retain           Available                                                          26m
+persistentvolume/pv0002   20Gi       RWX            Retain           Available                                                          7m47s
+persistentvolume/pv0003   4Gi        RWO            Retain           Bound       default/myclaim-1                                      7m46s
+persistentvolume/pv0004   100Gi      RWO            Retain           Bound       default/myclaim-2-large-slow   large-slow              7m7s
+persistentvolume/pv0005   10Gi       RWO            Retain           Available                                  small-fast              7m6s
+
+NAME                                         STATUS   VOLUME   CAPACITY   ACCESS MODES   STORAGECLASS   AGE
+persistentvolumeclaim/myclaim-1              Bound    pv0003   4Gi        RWO                           7m43s
+persistentvolumeclaim/myclaim-2-large-slow   Bound    pv0004   100Gi      RWO            large-slow     7m4s
+
+NAME                     READY   STATUS    RESTARTS   AGE
+pod/mypv-test            1/1     Running   0          7m42s
+pod/mypv-test-big-slow   0/1     Pending   0          7m2s
+
