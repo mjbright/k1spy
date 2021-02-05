@@ -832,6 +832,7 @@ def cls():
     sys.stdout.write('\033[H\033[J')
 
 def main_setup(p_resources, p_namespace):
+    ''' Normalize resources/namespace argument values '''
     final_resources=[]
     for reslist in p_resources:
         if "," in reslist:
@@ -841,22 +842,25 @@ def main_setup(p_resources, p_namespace):
             resource_list = reslist
             final_resources.append(resource_list)
 
-    resources=final_resources
+    ret_resources=final_resources
+    ret_namespace=p_namespace
 
-    namespace=p_namespace
     if p_namespace is None:
-        namespace=default_namespace
+        ret_namespace=default_namespace
     if p_namespace == "-":
-        namespace="all"
+        ret_namespace="all"
 
-    if len(resources) == 0:
-        resources = default_resources
+    if len(ret_resources) == 0:
+        ret_resources = default_resources
 
-    return (resources, namespace)
+    return (ret_resources, ret_namespace)
 
 def main_loop():
+    ''' Main execution loop '''
     full_context = build_context_namespace_resources_info(context, namespace, resources)
     print(f'full_context={full_context}\n')
+
+    global nodes
 
     last_output=''
     while True:
@@ -878,6 +882,7 @@ def main_loop():
         time.sleep(0.5)     # Sleep for 500 milliseconds
 
 def sprint_all_resources(resource):
+    ''' Build up output for 'all' resource types '''
     output = ''
     if resource.find("nall") == 0:
         output=sprint_nodes()
@@ -893,6 +898,7 @@ def sprint_all_resources(resource):
     return output
 
 def sprint_resource(resource):
+    ''' Build up output for 'resource' type '''
     if resource.find("no") == 0:
         return sprint_nodes()
     if resource.find("all") == 0 or resource.find("nall") == 0:
@@ -919,6 +925,7 @@ def sprint_resource(resource):
         return sprint_pvs(namespace)
 
     die(f"No match for resource type '{resource}'")
+    return None # To satisfy pylint
 
 ## -- Args: ----------------------------------------------------
 
