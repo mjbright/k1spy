@@ -390,7 +390,8 @@ def sprint_pvs(p_namespace):
     ''' build single-line representing resource info '''
     res_type =  'persistentvolumes:' if SHOW_TYPES else ''
     ret = corev1.list_persistent_volume(watch=False)
-    if len(ret.items) == 0: return ''
+    if len(ret.items) == 0:
+        return ''
     write_json_items(ret.items, TMP_DIR + '/pvsN.json')
 
     return res_type + '' + p_namespace
@@ -664,7 +665,7 @@ def sprint_services(p_namespace='all'):
 
         if spec and 'ports' in spec and spec['ports'] and 'node_port' in spec['ports'][0]:
             port0=spec['ports'][0]
-            if 'node_port' in port0 and port0['node_port'] != None:
+            if 'node_port' in port0 and port0['node_port'] is not None:
                 port=f" {port0['port']}:{port0['node_port']}"
             else:
                 port=f" {port0['port']}"
@@ -747,8 +748,7 @@ def sprint_cron_jobs(p_namespace='all'):
     return res_type + sort_lines_by_age(op_lines)
 
 def test_methods():
-    global nodes
-    nodes = get_nodes()
+    ''' test print and sprintf methods '''
 
     print("\n======== Listing nodes with their IPs:")
     print_nodes()
@@ -756,80 +756,83 @@ def test_methods():
     print("\n======== [all namespaces] Listing pods with their IPs:")
     print_pods()
     print("\n---- [namespace='default'] Listing pods with their IPs:")
-    print_pods(namespace='default')
+    print_pods(p_namespace='default')
 
     print("\n======== [all namespaces] Listing deployments:")
     print_deployments()
     print("\n---- [namespace='default'] Listing deployments:")
-    print_deployments(namespace='default')
+    print_deployments(p_namespace='default')
 
     print("\n======== [all namespaces] Listing daemon_sets:")
     print_daemon_sets()
     print("\n---- [namespace='default'] Listing daemon_sets:")
-    print_daemon_sets(namespace='default')
+    print_daemon_sets(p_namespace='default')
 
     print("\n======== [all namespaces] Listing stateful_sets:")
     print_stateful_sets()
     print("\n---- [namespace='default'] Listing stateful_sets:")
-    print_stateful_sets(namespace='default')
+    print_stateful_sets(p_namespace='default')
 
     print("\n======== [all namespaces] Listing replica_sets:")
     print_replica_sets()
     print("\n---- [namespace='default'] Listing replica_sets:")
-    print_replica_sets(namespace='default')
+    print_replica_sets(p_namespace='default')
 
     print("\n======== [all namespaces] Listing stateful_sets:")
     print_stateful_sets()
     print("\n---- [namespace='default'] Listing stateful_sets:")
-    print_stateful_sets(namespace='default')
+    print_stateful_sets(p_namespace='default')
 
     print("\n======== [all namespaces] Listing services:")
     print_services()
     print("\n---- [namespace='default'] Listing services:")
-    print_services(namespace='default')
+    print_services(p_namespace='default')
 
     print("\n======== [all namespaces] Listing jobs:")
     print_jobs()
     print("\n---- [namespace='default'] Listing jobs:")
-    print_jobs(namespace='default')
+    print_jobs(p_namespace='default')
 
     print("\n======== [all namespaces] Listing cron_jobs:")
     print_cron_jobs()
     print("\n---- [namespace='default'] Listing cron_jobs:")
-    print_cron_jobs(namespace='default')
+    print_cron_jobs(p_namespace='default')
 
-def namespace_exists(namespace):
-    if namespace == "all":
+def namespace_exists(p_namespace):
+    ''' check if namespace exists - or True if 'all' specified '''
+    if p_namespace == "all":
         return True
 
     ret = corev1.list_namespace(watch=False)
     for i in ret.items:
-        if i.metadata.name == namespace:
+        if i.metadata.name == p_namespace:
             return True
     return False
 
-def build_context_namespace_resources_info(context, namespace, resources):
-    p_context=f'{ bold_white("Context:") } { bold_green(context) }'
-    p_resources=f'{ bold_white("Resources:") } { bold_green(resources) }'
-    if namespace_exists(namespace):
-        p_namespace=f'{ bold_white("Namespace:") } { bold_green(namespace) }'
+def build_context_namespace_resources_info(p_context, p_namespace, p_resources):
+    ''' convenience: build up context status line '''
+    pr_context=f'{ bold_white("Context:") } { bold_green(p_context) }'
+    pr_resources=f'{ bold_white("Resources:") } { bold_green(p_resources) }'
+    if namespace_exists(p_namespace):
+        pr_namespace=f'{ bold_white("Namespace:") } { bold_green(p_namespace) }'
     else:
-        p_namespace=f'{ bold_white("Namespace:") } { bold_red(namespace) }'
+        pr_namespace=f'{ bold_white("Namespace:") } { bold_red(p_namespace) }'
 
-    return f'{ p_context } / { p_namespace } / { p_resources }'
+    return f'{ pr_context } / { pr_namespace } / { pr_resources }'
 
 def cls():
+    ''' clear screen '''
     sys.stdout.write('\033[H\033[J')
 
 ## -- Args: ----------------------------------------------------
 
-a=1
+arg_idx=1
 namespace=None
 resources=[]
 
-while a <= (len(sys.argv)-1):
-    arg=sys.argv[a]
-    a+=1
+while arg_idx <= (len(sys.argv)-1):
+    arg=sys.argv[arg_idx]
+    arg_idx+=1
     if arg == "-st":
         SHOW_TYPES=True
         continue
@@ -848,6 +851,7 @@ while a <= (len(sys.argv)-1):
         continue
 
     if arg == "-test":
+        nodes = get_nodes()
         test_methods()
         sys.exit(0)
 
@@ -861,13 +865,13 @@ while a <= (len(sys.argv)-1):
         continue
 
     if arg == "-n":
-        namespace=sys.argv[a]
-        a+=1
+        namespace=sys.argv[arg_idx]
+        arg_idx+=1
         continue
 
     if arg == "-r":
-        resources.append(sys.argv[a])
-        a+=1
+        resources.append(sys.argv[arg_idx])
+        arg_idx+=1
         continue
 
     resources.append( arg )
@@ -877,11 +881,11 @@ while a <= (len(sys.argv)-1):
 final_resources=[]
 for reslist in resources:
     if "," in reslist:
-        res = reslist.split(",")
-        final_resources.extend(res)
+        resource_list = reslist.split(",")
+        final_resources.extend(resource_list)
     else:
-        res = reslist
-        final_resources.append(res)
+        resource_list = reslist
+        final_resources.append(resource_list)
 
 resources=final_resources
 
@@ -890,17 +894,18 @@ if namespace is None:
 if namespace == "-":
     namespace="all"
 
-if len(resources) == 0: resources = default_resources
+if len(resources) == 0:
+    resources = default_resources
 
 full_context = build_context_namespace_resources_info(context, namespace, resources)
 print(f'full_context={full_context}\n')
 
-last_op=''
+last_output=''
 while True:
-    op=''
+    output=''
 
     full_context = build_context_namespace_resources_info(context, namespace, resources)
-    op += full_context + '\n'
+    output += full_context + '\n'
 
     nodes = get_nodes()
 
@@ -909,65 +914,65 @@ while True:
 
         if resource.find("no") == 0:
             match=True
-            op+=sprint_nodes()
+            output+=sprint_nodes()
 
         if resource.find("all") == 0 or resource.find("nall") == 0:
             match=True
             if resource.find("nall") == 0:
-                op+=sprint_nodes()
-            op+=sprint_services(namespace)
-            op+=sprint_deployments(namespace)
-            op+=sprint_replica_sets(namespace)
-            op+=sprint_stateful_sets(namespace)
-            op+=sprint_pods(namespace)
-            op+=sprint_jobs(namespace)
-            op+=sprint_cron_jobs(namespace)
-            op+=sprint_pvs(namespace)
-            op+=sprint_pvcs(namespace)
+                output+=sprint_nodes()
+            output+=sprint_services(namespace)
+            output+=sprint_deployments(namespace)
+            output+=sprint_replica_sets(namespace)
+            output+=sprint_stateful_sets(namespace)
+            output+=sprint_pods(namespace)
+            output+=sprint_jobs(namespace)
+            output+=sprint_cron_jobs(namespace)
+            output+=sprint_pvs(namespace)
+            output+=sprint_pvcs(namespace)
 
         if resource.find("svc") == 0 or resource.find("service") == 0:
             match=True
-            op+=sprint_services(namespace)
+            output+=sprint_services(namespace)
 
         if resource.find("dep") == 0:
             match=True
-            op+=sprint_deployments(namespace)
+            output+=sprint_deployments(namespace)
 
         if resource.find("ds") == 0 or resource.find("dset") == 0 or resource.find("daemonset") == 0:
             match=True
-            op+=sprint_daemon_sets(namespace)
+            output+=sprint_daemon_sets(namespace)
 
         if resource.find("rs") == 0 or resource.find("replicaset") == 0:
             match=True
-            op+=sprint_replica_sets(namespace)
+            output+=sprint_replica_sets(namespace)
 
         if resource.find("ss") == 0 or resource.find("sts") == 0:
             match=True
-            op+=sprint_stateful_sets(namespace)
+            output+=sprint_stateful_sets(namespace)
 
         if resource.find("po") == 0:
             match=True
-            op+=sprint_pods(namespace)
+            output+=sprint_pods(namespace)
 
         if resource.find("job") == 0:
             match=True
-            op+=sprint_jobs(namespace)
+            output+=sprint_jobs(namespace)
         if resource.find("cj") == 0 or resource.find("cron") == 0:
             match=True
-            op+=sprint_cron_jobs(namespace)
+            output+=sprint_cron_jobs(namespace)
         if resource.find("pvc") == 0:
             match=True
-            op+=sprint_pvcs(namespace)
+            output+=sprint_pvcs(namespace)
         if resource.find("pv") == 0:
             match=True
-            op+=sprint_pvs(namespace)
+            output+=sprint_pvs(namespace)
 
         if not match:
             die(f"No match for resource type '{resource}'")
 
-    if op != last_op:
+    if output != last_output:
         cls()
-        print(op)
-        last_op = op
+        print(output)
+        last_output = output
 
     time.sleep(0.5)     # Sleep for 500 milliseconds
