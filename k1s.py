@@ -350,8 +350,6 @@ def sprint_pods(p_namespace='all'):
 
     op_lines=[]
     for i in ret.items:
-        #pod_name      = i.metadata.name
-        #pod_namespace = i.metadata.namespace
         pod_ip        = i.status.pod_ip
         host_ip       = i.status.host_ip
         host          = host_ip
@@ -574,7 +572,6 @@ def print_services(p_namespace='all'):
 
 def sprint_services(p_namespace='all'):
     ''' build single-line representing resource info '''
-    #res_type =  'svc/' if SHOW_TYPES else ''
     res_type =  'services:' if SHOW_TYPES else ''
 
     if p_namespace == 'all':
@@ -590,7 +587,6 @@ def sprint_services(p_namespace='all'):
         port=""
         spec = i.spec.to_dict()
 
-        svc_type=spec['type']
         ext_ips=spec['external_i_ps']
 
         # Needs checking, is it this field or load_balancer_ip ??
@@ -609,14 +605,15 @@ def sprint_services(p_namespace='all'):
         if not cluster_ip:
             cluster_ip=''
 
-        policy=""
+        #policy=""
         age, age_hms = get_age(i)
 
         ns_info=''
         if p_namespace == 'all':
             ns_info=f'[{i.metadata.namespace:{NS_FMT}}] '
 
-        svc_info = f'{cluster_ip:14s} {svc_type:12s} {ext_ips:15s} {port:14s}{policy:8s} {age_hms}'
+        #svc_info = f'{cluster_ip:14s} {svc_type:12s} {ext_ips:15s} {port:14s}{policy:8s} {age_hms}'
+        svc_info = f'{cluster_ip:14s} {spec["type"]:12s} {ext_ips:15s} {port:14s} {age_hms}'
         line = f'  {ns_info} {i.metadata.name:{NAME_FMT}} {svc_info}\n'
         op_lines.append({'age': age, 'line': line})
 
@@ -746,7 +743,8 @@ def namespace_exists(p_namespace):
 def build_context_namespace_resources_info(p_context, p_namespace, p_resources):
     ''' convenience: build up context status line '''
     pr_context=f'{ bold_white("Context:") } { bold_green(p_context) }'
-    pr_resources=f'{ bold_white("Resources:") } { bold_green(p_resources) }'
+    #pr_resources=f'{ bold_white("Resources:") } { bold_green(p_resources) }'
+    pr_resources=f'{ bold_white("Resources:") } { bold_green( ",".join(p_resources)) }'
     if namespace_exists(p_namespace):
         pr_namespace=f'{ bold_white("Namespace:") } { bold_green(p_namespace) }'
     else:
