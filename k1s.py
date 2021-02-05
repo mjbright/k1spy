@@ -12,11 +12,12 @@ NS_FMT="15s"
 default_resources=["all"]
 
 import os, sys, time
-from kubernetes import client, config
 
 # For timestamp handling:
 from datetime import datetime
 import json
+
+from kubernetes import client, config
 
 ## -- Get kubeconfig/cluster information: -------------------------
 
@@ -237,6 +238,79 @@ def get_nodes():
         node_name = i.metadata.name
         nodes[node_ip] = node_name
     return nodes
+
+'''
+NAME                      CAPACITY   ACCESS MODES   RECLAIM POLICY   STATUS      CLAIM                          STORAGECLASS   REASON   AGE
+persistentvolume/pv0001   100Gi      RWO            Retain           Available                                                          26m
+persistentvolume/pv0002   20Gi       RWX            Retain           Available                                                          7m47s
+persistentvolume/pv0003   4Gi        RWO            Retain           Bound       default/myclaim-1                                      7m46s
+persistentvolume/pv0004   100Gi      RWO            Retain           Bound       default/myclaim-2-large-slow   large-slow              7m7s
+persistentvolume/pv0005   10Gi       RWO            Retain           Available                                  small-fast              7m6s
+
+NAME                                         STATUS   VOLUME   CAPACITY   ACCESS MODES   STORAGECLASS   AGE
+persistentvolumeclaim/myclaim-1              Bound    pv0003   4Gi        RWO                           7m43s
+persistentvolumeclaim/myclaim-2-large-slow   Bound    pv0004   100Gi      RWO            large-slow     7m4s
+
+NAME                     READY   STATUS    RESTARTS   AGE
+pod/mypv-test            1/1     Running   0          7m42s
+pod/mypv-test-big-slow   0/1     Pending   0          7m2s
+
+{'api_version': None,
+ 'metadata': { 'name': 'pv0001',
+ 'spec': {'access_modes': ['ReadWriteOnce'], 'capacity': {'storage': '100Gi'},
+          'host_path': {'path': '/tmp/data01', 'type': ''}, 'persistent_volume_reclaim_policy': 'Retain', 'volume_mode': 'Filesystem',
+ 'status': {'message': None, 'phase': 'Available', 'reason': None}}
+
+
+{'api_version': None,
+ 'metadata': {'annotations': {'pv.kubernetes.io/bound-by-controller': 'yes'},
+              'creation_timestamp': datetime.datetime(2021, 1, 17, 22, 37, 2, tzinfo=tzlocal()),
+              'finalizers': ['kubernetes.io/pv-protection'],
+              'labels': {'type': 'local'},
+              'managed_fields': [{'api_version': 'v1',
+                                  'fields_type': 'FieldsV1',
+                                  'fields_v1': {'f:metadata': {'f:labels': {'.': {},
+                                                                            'f:type': {}}},
+                                                'f:spec': {'f:accessModes': {},
+                                                           'f:capacity': {'.': {},
+                                                                          'f:storage': {}},
+                                                           'f:hostPath': {'.': {},
+                                                                          'f:path': {},
+                                                                          'f:type': {}},
+                                                           'f:persistentVolumeReclaimPolicy': {},
+                                                           'f:volumeMode': {}}},
+                                  'manager': 'kubectl-create',
+                                  'operation': 'Update',
+                                  'time': datetime.datetime(2021, 1, 17, 22, 37, 2, tzinfo=tzlocal())},
+                                 {'api_version': 'v1',
+                                  'fields_type': 'FieldsV1',
+                                  'fields_v1': {'f:metadata': {'f:annotations': {'.': {},
+                                                                                 'f:pv.kubernetes.io/bound-by-controller': {}}},
+                                                'f:spec': {'f:claimRef': {'.': {},
+                                                                          'f:apiVersion': {},
+                                                                          'f:kind': {},
+                                                                          'f:name': {},
+                                                                          'f:namespace': {},
+                                                                          'f:resourceVersion': {},
+                                                                          'f:uid': {}}},
+                                                'f:status': {'f:phase': {}}},
+                                  'manager': 'kube-controller-manager',
+                                  'operation': 'Update',
+                                  'time': datetime.datetime(2021, 1, 17, 22, 37, 5, tzinfo=tzlocal())}],
+              'name': 'pv0003',
+ 'spec': {'access_modes': ['ReadWriteOnce'],
+          'capacity': {'storage': '4Gi'},
+          'claim_ref': {'api_version': 'v1',
+                        'kind': 'PersistentVolumeClaim',
+                        'name': 'myclaim-1',
+                        'namespace': 'default',
+                        'resource_version': '84521',
+                        'uid': 'c1d9cb62-9e8f-4365-bbf0-c862dfe88016'},
+          'host_path': {'path': '/tmp/data03', 'type': ''},
+          'persistent_volume_reclaim_policy': 'Retain',
+          'volume_mode': 'Filesystem',
+ 'status': {'message': None, 'phase': 'Bound', 'reason': None}}
+'''
 
 def print_pvs(namespace='all'):  print(sprint_pvs(namespace))
 
