@@ -1,5 +1,14 @@
 #!/usr/bin/env python3
 
+import os
+import sys
+import time
+# For timestamp handling:
+from datetime import datetime
+import json
+
+from kubernetes import client, config
+
 SHOW_TYPES=True
 
 VERBOSE=False
@@ -11,22 +20,14 @@ NS_FMT="15s"
 #default_resources=["pods"]
 default_resources=["all"]
 
-import os, sys, time
-
-# For timestamp handling:
-from datetime import datetime
-import json
-
-from kubernetes import client, config
-
 ## -- Get kubeconfig/cluster information: -------------------------
 
-# Make sure ~/.kube/config is pointing to a valid cluster or kubernetes import will timeout ... after quite a while ...
+# Make sure ~/.kube/config is pointing to a valid cluster
 HOME=os.getenv('HOME')
 KUBECONFIG=os.getenv('KUBECONFIG')
 DEFAULT_KUBECONFIG=HOME+'/.kube/config'
 
-if KUBECONFIG == None:
+if KUBECONFIG is None:
     KUBECONFIG=DEFAULT_KUBECONFIG
 
 #config.load_kube_config()
@@ -39,12 +40,14 @@ else:
 
 #os.mkdir( '~/tmp', 0755 )
 TMP_DIR = HOME + '/tmp'
-if not os.path.exists(TMP_DIR): os.mkdir( TMP_DIR )
+if not os.path.exists(TMP_DIR):
+    os.mkdir( TMP_DIR )
 
 ## -- Get context/namespace  information: -------------------------
 
 contexts, active_context = config.list_kube_config_contexts()
-# {'context': {'cluster': 'kubernetes', 'namespace': 'k8scenario', 'user': 'kubernetes-admin'}, 'name': 'k8scenario'}
+# {'context': {'cluster': 'kubernetes', 'namespace': 'k8scenario', 'user': 'kubernetes-admin'},
+#  'name': 'k8scenario'}
 
 default_namespace='default'
 if 'namespace' in active_context['context']:
@@ -71,7 +74,7 @@ BLUE = '\033[34m'
 MAGENTA = '\033[35m'
 CYAN = '\033[36m'
 WHITE = '\033[37m'
-UNDERLINE = '\033[4m'
+UNDERline = '\033[4m'
 RESET = '\033[0m'
 
 BOLD_BLACK = '\033[30;1m'
@@ -83,126 +86,172 @@ BOLD_MAGENTA = '\033[35;1m'
 BOLD_CYAN = '\033[36;1m'
 BOLD_WHITE = '\033[37;1m'
 
-def black(msg):    return f"{BLACK}{msg}{RESET}"
-def red(msg):      return f"{RED}{msg}{RESET}"
-def green(msg):    return f"{GREEN}{msg}{RESET}"
-def yellow(msg):   return f"{YELLOW}{msg}{RESET}"
-def blue(msg):     return f"{BLUE}{msg}{RESET}"
-def magenta(msg):  return f"{MAGENTA}{msg}{RESET}"
-def cyan(msg):     return f"{CYAN}{msg}{RESET}"
-def white(msg):    return f"{WHITE}{msg}{RESET}"
-def underline(msg): return f"{UNDERLINE}{msg}{RESET}"
-def reset(msg):    return f"{RESET}{msg}{RESET}"
+def black(msg):
+    ''' return black ansi-coloured 'msg' text'''
+    return f"{BLACK}{msg}{RESET}"
+def red(msg):
+    ''' return red   ansi-coloured 'msg' text'''
+    return f"{RED}{msg}{RESET}"
+def green(msg):
+    ''' return green ansi-coloured 'msg' text'''
+    return f"{GREEN}{msg}{RESET}"
+def yellow(msg):
+    ''' return yellow ansi-coloured 'msg' text'''
+    return f"{YELLOW}{msg}{RESET}"
+def blue(msg):
+    ''' return blue  ansi-coloured 'msg' text'''
+    return f"{BLUE}{msg}{RESET}"
+def magenta(msg):
+    ''' return magenta ansi-coloured 'msg' text'''
+    return f"{MAGENTA}{msg}{RESET}"
+def cyan(msg):
+    ''' return cyan  ansi-coloured 'msg' text'''
+    return f"{CYAN}{msg}{RESET}"
+def white(msg):
+    ''' return white ansi-coloured 'msg' text'''
+    return f"{WHITE}{msg}{RESET}"
+def underline(msg):
+    ''' return ansi-underlined 'msg' text'''
+    return f"{UNDERline}{msg}{RESET}"
+def reset(msg):
+    ''' reset ansi-colouring before 'msg' text'''
+    return f"{RESET}{msg}{RESET}"
 
-def bold_black(msg):    return f"{BOLD_BLACK}{msg}{RESET}"
-def bold_red(msg):      return f"{BOLD_RED}{msg}{RESET}"
-def bold_green(msg):    return f"{BOLD_GREEN}{msg}{RESET}"
-def bold_yellow(msg):   return f"{BOLD_YELLOW}{msg}{RESET}"
-def bold_blue(msg):     return f"{BOLD_BLUE}{msg}{RESET}"
-def bold_magenta(msg):  return f"{BOLD_MAGENTA}{msg}{RESET}"
-def bold_cyan(msg):     return f"{BOLD_CYAN}{msg}{RESET}"
-def bold_white(msg):    return f"{BOLD_WHITE}{msg}{RESET}"
+def bold_black(msg):
+    ''' return bold-black ansi-coloured 'msg' text'''
+    return f"{BOLD_BLACK}{msg}{RESET}"
+def bold_red(msg):
+    ''' return bold-red   ansi-coloured 'msg' text'''
+    return f"{BOLD_RED}{msg}{RESET}"
+def bold_green(msg):
+    ''' return bold-green ansi-coloured 'msg' text'''
+    return f"{BOLD_GREEN}{msg}{RESET}"
+def bold_yellow(msg):
+    ''' return bold-yellow ansi-coloured 'msg' text'''
+    return f"{BOLD_YELLOW}{msg}{RESET}"
+def bold_blue(msg):
+    ''' return bold-blue  ansi-coloured 'msg' text'''
+    return f"{BOLD_BLUE}{msg}{RESET}"
+def bold_magenta(msg):
+    ''' return bold-magenta ansi-coloured 'msg' text'''
+    return f"{BOLD_MAGENTA}{msg}{RESET}"
+def bold_cyan(msg):
+    ''' return bold-cyan  ansi-coloured 'msg' text'''
+    return f"{BOLD_CYAN}{msg}{RESET}"
+def bold_white(msg):
+    ''' return bold-white ansi-coloured 'msg' text'''
+    return f"{BOLD_WHITE}{msg}{RESET}"
 
 #print(red("Hello"),"there",blue("how"),"are you?")
 #print(underline("Hello"),"there",green("how"),yellow("are you?"))
 
 #= END OF === COLOUR DEFINITIONS ==============================
 
+## -- Funcs: ---------------------------------------------------
+
 def die(msg):
-    print(f"die: {msg}")
+    ''' exit after printing bold-red error 'msg' text'''
+    print(f"die: { bold_red(msg) }")
     sys.exit(1)
 
-def sort_lines_by_age(op_lines, ages):
+def sort_lines_by_age(op_lines):
+    ''' sort 'op_lines' list using 'age' attribute of each line '''
     sorted_op_lines = sorted(op_lines, key=lambda x: x['age'], reverse=True)
     retstr = "\n"
     for line in sorted_op_lines:
         retstr += line['line']
     return retstr
 
-def setHMS(AGEsecs):
-    OP=""
+def set_hms(age_secs):
+    ''' Build up a days-hours-mins-secs from provided {age_sec} secs '''
+    output=""
 
     try:
-        if AGEsecs > 3600 * 24: # > 1d
-            days = int(AGEsecs / 3600 / 24)
-            AGEsecs = AGEsecs - (3600 * 24 * days)
-            OP+=f"{days}d"
-        if AGEsecs > 3600: # > 1h
-            hours = int(AGEsecs / 3600)
-            AGEsecs = AGEsecs - (3600 * hours)
-            OP+=f"{hours:02d}h"
-        if AGEsecs > 60: # > 1m
-            mins = int(AGEsecs / 60)
-            AGEsecs = AGEsecs - (60 * mins)
-            OP+=f"{mins:02d}m"
-        OP+=f"{AGEsecs:02}s"
-        return OP.strip('0') # Strip of any leading zero
+        if age_secs > 3600 * 24: # > 1d
+            days = int(age_secs / 3600 / 24)
+            age_secs = age_secs - (3600 * 24 * days)
+            output+=f"{days}d"
+        if age_secs > 3600: # > 1h
+            hours = int(age_secs / 3600)
+            age_secs = age_secs - (3600 * hours)
+            output+=f"{hours:02d}h"
+        if age_secs > 60: # > 1m
+            mins = int(age_secs / 60)
+            age_secs = age_secs - (60 * mins)
+            output+=f"{mins:02d}m"
+        output+=f"{age_secs:02}s"
+        return output.strip('0') # Strip of any leading zero
     except:
         return "-"
 
 def write_json(response, json_file):
-    #def datetime_handler(x):
-        #if isinstance(x, datetime.datetime):
-            #return x.isoformat()
-        #raise TypeError("Unknown type")
-
-    #json_struct = json.dumps(response, default=datetime_handler, indent=2)
+    ''' Write dump json {response} to {json_file} '''
     json_struct = json.dumps(response, indent=2)
     Path(json_file).write_text(json_struct)
 
 def write_json_items(items, file):
+    ''' Write each json {item} to {file} '''
     loop=1
     for i in items:
         jfile=file.replace("N.json", f'{loop}.json')
-        fd = open(jfile, 'w')
-        fd.write(str(i))
+        filed = open(jfile, 'w')
+        filed.write(str(i))
         loop += 1
-        #write_json(i, jfile)
 
 def get_age(i):
+    ''' obtain {creation_time} age from {i.metadata} '''
     creation_time = str(i.metadata.creation_timestamp)
-    if '+00:00' in creation_time: creation_time = creation_time[ : creation_time.find('+00:00') ]
+    if '+00:00' in creation_time:
+        creation_time = creation_time[ : creation_time.find('+00:00') ]
 
     try:
-        d = datetime.strptime(creation_time, "%Y-%m-%d %H:%M:%S")
-        AGE=time.mktime(d.timetuple())
-        d = datetime.now()
-        NOW=time.mktime(d.timetuple())
-        AGE=NOW-AGE
-        AGE=int(AGE) # Remove .0
-        #AGE=AGE[:-2] # Remove .0
-    except:
-        AGE=0
+        time_str = datetime.strptime(creation_time, "%Y-%m-%d %H:%M:%S")
+        age_secs=time.mktime(time_str.timetuple())
 
-    return AGE, setHMS(AGE)
+        time_str = datetime.now()
+        now_secs=time.mktime(time_str.timetuple())
+
+        age_secs=now_secs - age_secs
+        age_secs=int(age_secs)
+    except:
+        age_secs=0
+
+    return age_secs, set_hms(age_secs)
 
 def get_replicas_info(instance):
+    ''' get info about pod replicas for controller instance '''
     spec=instance.spec.replicas
     stat=instance.status.ready_replicas
     if stat == spec:
         replicas_info=green(f'{stat}/{spec}')
     else:
-        if stat == None: stat = 0
+        if stat is None:
+            stat = 0
         replicas_info=yellow(f'{stat}/{spec}')
     return replicas_info
 
-def print_nodes(): print(sprint_nodes())
+def print_nodes():
+    ''' print resource info '''
+    print(sprint_nodes())
 
 def sprint_nodes():
-    #type =  'node/' if SHOW_TYPES else ''
-    type =  'nodes:' if SHOW_TYPES else ''
+    ''' build single-line representing resource info '''
+    res_type =  'nodes:' if SHOW_TYPES else ''
 
     ret = corev1.list_node(watch=False)
-    if len(ret.items) == 0: return ''
+    if len(ret.items) == 0:
+        return ''
+
     write_json_items(ret.items, TMP_DIR + '/nodesN.json')
 
-    op_lines=[]; ages={}; idx=0
+    op_lines=[]
 
     max_name_len=0
     for i in ret.items:
-        #print(max_name_len)
         node_name = i.metadata.name
-        if len(node_name) > max_name_len: max_name_len=len(node_name)
+        if len(node_name) > max_name_len:
+            max_name_len=len(node_name)
+
         name_format=f'<{max_name_len+12}s'
 
     for i in ret.items:
@@ -217,27 +266,29 @@ def sprint_nodes():
         if taints and len(taints) != 0:
             noexec=False
             for taint in taints:
-                if hasattr(taint, 'effect') and taint.effect == 'NoExecute': noexec=True
+                if hasattr(taint, 'effect') and taint.effect == 'NoExecute':
+                    noexec=True
             if noexec:
                 node_name = red(node_name)
             else:
                 node_name = yellow(node_name)
 
-        AGE, AGE_HMS = get_age(i)
-        LINE=f"   {node_name:8s} { green( node_ip ) :24s} {AGE_HMS}\n"
-        op_lines.append({'age': AGE, 'line': LINE})
+        age, age_hms = get_age(i)
+        line=f"   {node_name:8s} { green( node_ip ) :24s} {age_hms}\n"
+        op_lines.append({'age': age, 'line': line})
 
-    return type + sort_lines_by_age(op_lines, ages)
+    return res_type + sort_lines_by_age(op_lines)
 
 def get_nodes():
-    nodes = {}
+    ''' get list of node resources '''
+    l_nodes = {}
 
     ret = corev1.list_node(watch=False)
     for i in ret.items:
         node_ip   = i.status.addresses[0].address
         node_name = i.metadata.name
-        nodes[node_ip] = node_name
-    return nodes
+        l_nodes[node_ip] = node_name
+    return l_nodes
 
 '''
 NAME                      CAPACITY   ACCESS MODES   RECLAIM POLICY   STATUS      CLAIM                          STORAGECLASS   REASON   AGE
@@ -312,56 +363,73 @@ pod/mypv-test-big-slow   0/1     Pending   0          7m2s
  'status': {'message': None, 'phase': 'Bound', 'reason': None}}
 '''
 
-def print_pvs(namespace='all'):  print(sprint_pvs(namespace))
+def print_pvs(p_namespace='all'):
+    ''' print resource info '''
+    print(sprint_pvs(p_namespace))
 
-def sprint_pvcs(namespace):
-    type =  'persistentvolumeclaims:' if SHOW_TYPES else ''
-    if namespace == 'all':
+def sprint_pvcs(p_namespace):
+    ''' build single-line representing resource info '''
+    res_type =  'persistentvolumeclaims:' if SHOW_TYPES else ''
+    if p_namespace == 'all':
         ret = corev1.list_persistent_volume_claim_for_all_namespaces(watch=False)
     else:
-        ret = corev1.list_namespaced_persistent_volume_claim(watch=False, namespace=namespace)
-    if len(ret.items) == 0: return ''
+        ret = corev1.list_namespaced_persistent_volume_claim(watch=False, namespace=p_namespace)
+
+    if len(ret.items) == 0:
+        return ''
+
     write_json_items(ret.items, TMP_DIR + '/pvcsN.json')
 
-    return ''
+    return res_type + ''
 
-def print_pvcs(namespace='all'): print(sprint_pvcs(namespace))
+def print_pvcs(p_namespace='all'):
+    ''' print resource info '''
+    print(sprint_pvcs(p_namespace))
 
-def sprint_pvs(namespace):
-    type =  'persistentvolumes:' if SHOW_TYPES else ''
+def sprint_pvs(p_namespace):
+    ''' build single-line representing resource info '''
+    res_type =  'persistentvolumes:' if SHOW_TYPES else ''
     ret = corev1.list_persistent_volume(watch=False)
     if len(ret.items) == 0: return ''
     write_json_items(ret.items, TMP_DIR + '/pvsN.json')
 
-    return ''
+    return res_type + '' + p_namespace
 
-def print_pods(namespace='all'): print(sprint_pods(namespace)[:-1])
+def print_pods(p_namespace='all'):
+    ''' print resource info '''
+    print(sprint_pods(p_namespace)[:-1])
 
-def sprint_pods(namespace='all'):
-    #type =  'pod/' if SHOW_TYPES else ''
-    type =  'pods:' if SHOW_TYPES else ''
+def sprint_pods(p_namespace='all'):
+    ''' build single-line representing resource info '''
+    res_type =  'pods:' if SHOW_TYPES else ''
 
-    if namespace == 'all':
+    if p_namespace == 'all':
         ret = corev1.list_pod_for_all_namespaces(watch=False)
     else:
-        ret = corev1.list_namespaced_pod(watch=False, namespace=namespace)
-    if len(ret.items) == 0: return ''
+        ret = corev1.list_namespaced_pod(watch=False, namespace=p_namespace)
+
+    if len(ret.items) == 0:
+        return ''
+
     write_json_items(ret.items, TMP_DIR + '/podsN.json')
 
-    op_lines=[]; ages={}; idx=0
+    op_lines=[]
     for i in ret.items:
-        pod_name      = i.metadata.name
-        pod_namespace = i.metadata.namespace
+        #pod_name      = i.metadata.name
+        #pod_namespace = i.metadata.namespace
         pod_ip        = i.status.pod_ip
         host_ip       = i.status.host_ip
         host          = host_ip
 
-        if pod_ip == None: pod_ip="-"
-        if host   == None: host="-"
+        if pod_ip is None:
+            pod_ip="-"
+        if host   is None:
+            host="-"
 
         if host_ip in nodes:
             host = nodes[host_ip]
-            if host.find("ma") == 0: host=cyan(host) # Colour master nodes
+            if host.find("ma") == 0:
+                host=cyan(host) # Colour master nodes
 
         phase=i.status.phase
         is_ready=False
@@ -374,8 +442,10 @@ def sprint_pods(namespace='all'):
                     if 'type' in cond:
                         ctype = cond['type']
                         cstatus = cond['status']
-                        if ctype == 'Ready'        and cstatus == "True": is_ready=True
-                        if ctype == 'PodScheduled' and cstatus == "True": is_scheduled=True
+                        if ctype == 'Ready'        and cstatus == "True":
+                            is_ready=True
+                        if ctype == 'PodScheduled' and cstatus == "True":
+                            is_scheduled=True
 
         info=''
         if is_scheduled and (not is_ready):
@@ -390,184 +460,202 @@ def sprint_pods(namespace='all'):
         else:
             info=phase
 
-        try:
+        cexpected=0
+        if 'container_statuses' in status:
             cexpected=len( status['container_statuses'] )
-        except:
-            cexpected=0
+
         cready=0
         des_act=f'{cready}/{cexpected}'
 
         if is_scheduled and is_ready:
             try:
-                for c in status['container_statuses']:
-                    if 'ready' in c and c['ready'] == True: cready+=1
+                for cont_status in status['container_statuses']:
+                    if 'ready' in cont_status and cont_status['ready']:
+                        cready+=1
                 des_act=f'{cready}/{cexpected} '
             except:
                 des_act=f'{cready}/{cexpected} '
-        if cready < cexpected: des_act=yellow(des_act)
 
-        if info == "Running": info=green("Running")
-        if info == "Complete": info=yellow("Running")
+        if cready < cexpected:
+            des_act=yellow(des_act)
+
+        if info == "Running":
+            info=green("Running")
+
+        if info == "Complete":
+            info=yellow("Running")
 
         if hasattr(i.metadata,'deletion_timestamp'):
-            if i.metadata.deletion_timestamp: info = red("Terminating")
+            if i.metadata.deletion_timestamp:
+                info = red("Terminating")
 
-        AGE, AGE_HMS = get_age(i)
+        age, age_hms = get_age(i)
 
         if VERBOSE: # Checking for unset vars
             print(f"namespace={i.metadata.namespace:{NS_FMT}}")
-            print(f"type/name={type}{i.metadata.name:{NAME_FMT}}")
+            print(f"type/name={res_type}{i.metadata.name:{NAME_FMT}}")
             print(f"info={info}")
             print(f"pod_ip/host={pod_ip:15s}/{host}\n")
-            print(f"creation_time={creation_time}")
-            print(f"AGE={AGE_HMS}\n")
+            print(f"creation_time={i.metadata.creation_time}")
+            print(f"age={age_hms}\n")
 
         ns_info=''
-        if namespace == 'all':
+        if p_namespace == 'all':
             ns_info=f'[{i.metadata.namespace:{NS_FMT}}] '
 
-        LINE = f"  {ns_info} {i.metadata.name:{NAME_FMT}} {des_act} {info:20s} {pod_ip:15s}/{host:10s} {AGE_HMS}\n"
-        op_lines.append({'age': AGE, 'line': LINE})
+        pod_info = f'{pod_ip:15s}/{host:10s} {age_hms}'
+        line = f'  {ns_info} {i.metadata.name:{NAME_FMT}} {des_act} {info:20s} {pod_info}\n'
+        op_lines.append({'age': age, 'line': line})
 
-    #return (type + sort_lines_by_age(op_lines, ages))[:-1]
-    return (type + sort_lines_by_age(op_lines, ages)).rstrip()
+    return (res_type + sort_lines_by_age(op_lines)).rstrip()
 
-def print_deployments(namespace='all'): print(sprint_deployments(namespace))
+def print_deployments(p_namespace='all'):
+    ''' print resource info '''
+    print(sprint_deployments(p_namespace))
 
-def sprint_deployments(namespace='all'):
-    #type =  'deploy' if SHOW_TYPES else ''
-    type =  'deployments:' if SHOW_TYPES else ''
+def sprint_deployments(p_namespace='all'):
+    ''' build single-line representing resource info '''
+    res_type =  'deployments:' if SHOW_TYPES else ''
 
-    if namespace == 'all':
+    if p_namespace == 'all':
         ret = appsv1.list_deployment_for_all_namespaces(watch=False)
     else:
-        ret = appsv1.list_namespaced_deployment(watch=False, namespace=namespace)
-    if len(ret.items) == 0: return ''
+        ret = appsv1.list_namespaced_deployment(watch=False, namespace=p_namespace)
+
+    if len(ret.items) == 0:
+        return ''
+
     write_json_items(ret.items, TMP_DIR + '/deploysN.json')
 
-    op_lines=[]; ages={}; idx=0
+    op_lines=[]
     for i in ret.items:
         info=get_replicas_info(i)
-        AGE, AGE_HMS = get_age(i)
+        age, age_hms = get_age(i)
 
         ns_info=''
-        if namespace == 'all':
+        if p_namespace == 'all':
             ns_info=f'[{i.metadata.namespace:{NS_FMT}}] '
 
-        #LINE = f"{type}{i.metadata.namespace:{NS_FMT}} {i.metadata.name:{NAME_FMT}} {info} {AGE_HMS}\n"
-        LINE = f"  {ns_info} {i.metadata.name:{NAME_FMT}} {info:{INFO_FMT}} {AGE_HMS}\n"
-        op_lines.append({'age': AGE, 'line': LINE})
+        line = f"  {ns_info} {i.metadata.name:{NAME_FMT}} {info:{INFO_FMT}} {age_hms}\n"
+        op_lines.append({'age': age, 'line': line})
 
-    #return (type + sort_lines_by_age(op_lines, ages))[:-1]
-    #return (type + sort_lines_by_age(op_lines, ages)).rstrip()
-    return type + sort_lines_by_age(op_lines, ages)
+    return res_type + sort_lines_by_age(op_lines)
 
-def print_daemon_sets(namespace='all'): print(sprint_daemon_sets(namespace))
+def print_daemon_sets(p_namespace='all'):
+    ''' print resource info '''
+    print(sprint_daemon_sets(p_namespace))
 
-def sprint_daemon_sets(namespace='all'):
-    #type =  'ds/' if SHOW_TYPES else ''
-    type =  'daemonsets:' if SHOW_TYPES else ''
+def sprint_daemon_sets(p_namespace='all'):
+    ''' build single-line representing resource info '''
+    #res_type =  'ds/' if SHOW_TYPES else ''
+    res_type =  'daemonsets:' if SHOW_TYPES else ''
 
-    if namespace == 'all':
+    if p_namespace == 'all':
         ret = appsv1.list_daemon_set_for_all_namespaces(watch=False)
     else:
-        ret = appsv1.list_namespaced_daemon_set(watch=False, namespace=namespace)
+        ret = appsv1.list_namespaced_daemon_set(watch=False, namespace=p_namespace)
     if len(ret.items) == 0: return ''
     write_json_items(ret.items, TMP_DIR + '/dsetsN.json')
 
-    op_lines=[]; ages={}; idx=0
+    op_lines=[]
     for i in ret.items:
-        AGE, AGE_HMS = get_age(i)
+        age, age_hms = get_age(i)
 
         ns_info=''
-        if namespace == 'all':
+        if p_namespace == 'all':
             ns_info=f'[{i.metadata.namespace:{NS_FMT}}] '
 
-        LINE = f"  {ns_info} {i.metadata.name:{NAME_FMT}}\n"
-        op_lines.append({'age': AGE, 'line': LINE})
+        line = f"  {ns_info} {i.metadata.name:{NAME_FMT}}\n"
+        op_lines.append({'age': age, 'line': line})
 
-    return type + sort_lines_by_age(op_lines, ages)
+    return res_type + sort_lines_by_age(op_lines)
 
-def print_stateful_sets(namespace='all'): print(sprint_stateful_sets(namespace))
+def print_stateful_sets(p_namespace='all'):
+    ''' print resource info '''
+    print(sprint_stateful_sets(p_namespace))
 
-def sprint_stateful_sets(namespace='all'):
-    #type =  'ss/' if SHOW_TYPES else ''
-    type =  'statefulsets:' if SHOW_TYPES else ''
+def sprint_stateful_sets(p_namespace='all'):
+    ''' build single-line representing resource info '''
+    #res_type =  'ss/' if SHOW_TYPES else ''
+    res_type =  'statefulsets:' if SHOW_TYPES else ''
 
-    if namespace == 'all':
+    if p_namespace == 'all':
         ret = appsv1.list_stateful_set_for_all_namespaces(watch=False)
     else:
-        ret = appsv1.list_namespaced_stateful_set(watch=False, namespace=namespace)
+        ret = appsv1.list_namespaced_stateful_set(watch=False, namespace=p_namespace)
     if len(ret.items) == 0: return ''
     write_json_items(ret.items, TMP_DIR + '/ssetsN.json')
 
-    op_lines=[]; ages={}; idx=0
+    op_lines=[]
     for i in ret.items:
         info=get_replicas_info(i)
-        AGE, AGE_HMS = get_age(i)
+        age, age_hms = get_age(i)
 
         ns_info=''
-        if namespace == 'all':
+        if p_namespace == 'all':
             ns_info=f'[{i.metadata.namespace:{NS_FMT}}] '
 
-        LINE = f"  {ns_info} {i.metadata.name:{NAME_FMT}} {info:56} {AGE_HMS}\n"
-        op_lines.append({'age': AGE, 'line': LINE})
+        line = f"  {ns_info} {i.metadata.name:{NAME_FMT}} {info:56} {age_hms}\n"
+        op_lines.append({'age': age, 'line': line})
 
-    return type + sort_lines_by_age(op_lines, ages)
+    return res_type + sort_lines_by_age(op_lines)
 
-def print_replica_sets(namespace='all'): print(sprint_replica_sets(namespace))
+def print_replica_sets(p_namespace='all'):
+    ''' print resource info '''
+    print(sprint_replica_sets(p_namespace))
 
-def sprint_replica_sets(namespace='all'):
-    #type =  'rs/' if SHOW_TYPES else ''
-    type =  'replicasets:' if SHOW_TYPES else ''
+def sprint_replica_sets(p_namespace='all'):
+    ''' build single-line representing resource info '''
+    #res_type =  'rs/' if SHOW_TYPES else ''
+    res_type =  'replicasets:' if SHOW_TYPES else ''
 
-    if namespace == 'all':
+    if p_namespace == 'all':
         ret = appsv1.list_replica_set_for_all_namespaces(watch=False)
     else:
-        ret = appsv1.list_namespaced_replica_set(watch=False, namespace=namespace)
+        ret = appsv1.list_namespaced_replica_set(watch=False, namespace=p_namespace)
     if len(ret.items) == 0: return ''
     write_json_items(ret.items, TMP_DIR + '/repsetsN.json')
 
-    op_lines=[]; ages={}; idx=0
+    op_lines=[]
     for i in ret.items:
         info=get_replicas_info(i)
-        AGE, AGE_HMS = get_age(i)
+        age, age_hms = get_age(i)
 
         ns_info=''
-        if namespace == 'all':
+        if p_namespace == 'all':
             ns_info=f'[{i.metadata.namespace:{NS_FMT}}] '
 
-        #LINE = f"{type}{i.metadata.namespace:{NS_FMT}} {i.metadata.name:{NAME_FMT}} {info:12s} {AGE_HMS}\n"
-        LINE = f"  {ns_info} {i.metadata.name:{NAME_FMT}} {info:{INFO_FMT}} {AGE_HMS}\n"
-        op_lines.append({'age': AGE, 'line': LINE})
+        line = f"  {ns_info} {i.metadata.name:{NAME_FMT}} {info:{INFO_FMT}} {age_hms}\n"
+        op_lines.append({'age': age, 'line': line})
 
-    return type + sort_lines_by_age(op_lines, ages)
+    return res_type + sort_lines_by_age(op_lines)
 
-def print_services(namespace='all'): print(sprint_services(namespace))
+def print_services(p_namespace='all'):
+    ''' print resource info '''
+    print(sprint_services(p_namespace))
 
-def sprint_services(namespace='all'):
-    #type =  'svc/' if SHOW_TYPES else ''
-    type =  'services:' if SHOW_TYPES else ''
+def sprint_services(p_namespace='all'):
+    ''' build single-line representing resource info '''
+    #res_type =  'svc/' if SHOW_TYPES else ''
+    res_type =  'services:' if SHOW_TYPES else ''
 
-    if namespace == 'all':
+    if p_namespace == 'all':
         ret = corev1.list_service_for_all_namespaces(watch=False)
     else:
-        ret = corev1.list_namespaced_service(watch=False, namespace=namespace)
+        ret = corev1.list_namespaced_service(watch=False, namespace=p_namespace)
     if len(ret.items) == 0: return ''
     write_json_items(ret.items, TMP_DIR + '/servicesN.json')
 
-    op_lines=[]; ages={}; idx=0
+    op_lines=[]
     for i in ret.items:
         NPORT=""
         spec = i.spec.to_dict()
-        #print(spec); die("X");
-        #{'cluster_ip': '10.109.121.252', 'external_ips': None, 'external_name': None, 'external_traffic_policy': None, 'health_check_node_port': None, 'load_balancer_ip': None, 'load_balancer_source_ranges': None,
-        #  'ports': [{'name': None, 'node_port': None, 'port': 80, 'protocol': 'TCP', 'target_port': 80}],
-        #  'publish_not_ready_addresses': None, 'selector': {'app': 'ckad-demo-green'}, 'session_affinity': 'None', 'session_affinity_config': None, 'type': 'ClusterIP'}
 
         SVC_TYPE=spec['type']
         EXT_IPS=spec['external_i_ps']
-        if not EXT_IPS: EXT_IPS='Pending' # Needs checking, is it this field or load_balancer_ip ??
+
+        # Needs checking, is it this field or load_balancer_ip ??
+        if not EXT_IPS: EXT_IPS='Pending'
 
         if spec and 'ports' in spec and spec['ports'] and 'node_port' in spec['ports'][0]:
             port0=spec['ports'][0]
@@ -581,67 +669,74 @@ def sprint_services(namespace='all'):
         if not CIP: CIP=''
 
         POLICY=""
-        AGE, AGE_HMS = get_age(i)
+        age, age_hms = get_age(i)
 
         ns_info=''
-        if namespace == 'all':
+        if p_namespace == 'all':
             ns_info=f'[{i.metadata.namespace:{NS_FMT}}] '
 
-        LINE = f"  {ns_info} {i.metadata.name:{NAME_FMT}} {CIP:14s} {SVC_TYPE:12s} {EXT_IPS:15s} {PORT:14s}{POLICY:8s} {AGE_HMS}\n"
-        op_lines.append({'age': AGE, 'line': LINE})
+        svc_info = f'{CIP:14s} {SVC_TYPE:12s} {EXT_IPS:15s} {PORT:14s}{POLICY:8s} {age_hms}'
+        line = f'  {ns_info} {i.metadata.name:{NAME_FMT}} {svc_info}\n'
+        op_lines.append({'age': age, 'line': line})
 
-    return type + sort_lines_by_age(op_lines, ages)
+    return res_type + sort_lines_by_age(op_lines)
 
-def print_jobs(namespace='all'): print(sprint_jobs(namespace))
+def print_jobs(p_namespace='all'):
+    ''' print resource info '''
+    print(sprint_jobs(p_namespace))
 
-def sprint_jobs(namespace='all'):
-    #type =  'job/' if SHOW_TYPES else ''
-    type =  'jobs:' if SHOW_TYPES else ''
+def sprint_jobs(p_namespace='all'):
+    ''' build single-line representing resource info '''
+    #res_type =  'job/' if SHOW_TYPES else ''
+    res_type =  'jobs:' if SHOW_TYPES else ''
 
-    if namespace == 'all':
+    if p_namespace == 'all':
         ret = batchv1.list_job_for_all_namespaces(watch=False)
     else:
-        ret = batchv1.list_namespaced_job(watch=False, namespace=namespace)
+        ret = batchv1.list_namespaced_job(watch=False, namespace=p_namespace)
     if len(ret.items) == 0: return ''
     write_json_items(ret.items, TMP_DIR + '/jobsN.json')
 
-    op_lines=[]; ages={}; idx=0
+    op_lines=[]
     for i in ret.items:
-        AGE, AGE_HMS = get_age(i)
+        age, age_hms = get_age(i)
 
         ns_info=''
-        if namespace == 'all':
+        if p_namespace == 'all':
             ns_info=f'[{i.metadata.namespace:{NS_FMT}}] '
 
-        LINE = f"  {ns_info} {i.metadata.name:{NAME_FMT}} {AGE_HMS}\n"
-        op_lines.append({'age': AGE, 'line': LINE})
+        line = f"  {ns_info} {i.metadata.name:{NAME_FMT}} {age_hms}\n"
+        op_lines.append({'age': age, 'line': line})
 
-    return type + sort_lines_by_age(op_lines, ages)
+    return res_type + sort_lines_by_age(op_lines)
 
-def print_cron_jobs(namespace='all'): print(sprint_cron_jobs(namespace))
+def print_cron_jobs(p_namespace='all'):
+    ''' print resource info '''
+    print(sprint_cron_jobs(p_namespace))
 
-def sprint_cron_jobs(namespace='all'):
-    #type =  'cronjob/' if SHOW_TYPES else ''
-    type =  'cronjobs:' if SHOW_TYPES else ''
+def sprint_cron_jobs(p_namespace='all'):
+    ''' build single-line representing resource info '''
+    #res_type =  'cronjob/' if SHOW_TYPES else ''
+    res_type =  'cronjobs:' if SHOW_TYPES else ''
 
-    if namespace == 'all':
+    if p_namespace == 'all':
         ret = batchv1beta1.list_cron_job_for_all_namespaces(watch=False)
     else:
-        ret = batchv1beta1.list_namespaced_cron_job(watch=False, namespace=namespace)
+        ret = batchv1beta1.list_namespaced_cron_job(watch=False, namespace=p_namespace)
     if len(ret.items) == 0: return ''
     write_json_items(ret.items, TMP_DIR + '/cronjobsN.json')
 
-    op_lines=[]; ages={}; idx=0
+    op_lines=[]
     for i in ret.items:
-        AGE, AGE_HMS = get_age(i)
+        age, age_hms = get_age(i)
         ns_info=''
-        if namespace == 'all':
+        if p_namespace == 'all':
             ns_info=f'[{i.metadata.namespace:{NS_FMT}}] '
 
-        LINE = f"{ns_info} {i.metadata.name:{NAME_FMT}} {AGE_HMS}\n"
-        op_lines.append({'age': AGE, 'line': LINE})
+        line = f"{ns_info} {i.metadata.name:{NAME_FMT}} {age_hms}\n"
+        op_lines.append({'age': age, 'line': line})
 
-    return type + sort_lines_by_age(op_lines, ages)
+    return res_type + sort_lines_by_age(op_lines)
 
 def test_methods():
     global nodes
@@ -704,21 +799,26 @@ def namespace_exists(namespace):
             return True
     return False
 
-#test_methods()
+def build_context_namespace_resources_info(context, namespace, resources):
+    p_context=f'{ bold_white("Context:") } { bold_green(context) }'
+    p_resources=f'{ bold_white("Resources:") } { bold_green(resources) }'
+    if namespace_exists(namespace):
+        p_namespace=f'{ bold_white("Namespace:") } { bold_green(namespace) }'
+    else:
+        p_namespace=f'{ bold_white("Namespace:") } { bold_red(namespace) }'
 
-# Clears but keeps at bottom of screeen:
-#def cls(): print(chr(27) + "[2J")
-# Clears and positions at top of screeen:
-#def cls(): print('\033[H\033[J')
+    return f'{ p_context } / { p_namespace } / { p_resources }'
+
 def cls(): sys.stdout.write('\033[H\033[J')
 
-a=1
+## -- Args: ----------------------------------------------------
 
+a=1
 namespace=None
 resources=[]
 
 while a <= (len(sys.argv)-1):
-    arg=sys.argv[a];
+    arg=sys.argv[a]
     a+=1
     if arg == "-st":            SHOW_TYPES=True;  continue
     if arg == "-show-types":    SHOW_TYPES=True;  continue
@@ -741,15 +841,18 @@ while a <= (len(sys.argv)-1):
         continue
 
     if arg == "-n":
-        namespace=sys.argv[a];
-        a+=1;
+        namespace=sys.argv[a]
+        a+=1
         continue
+
     if arg == "-r":
-        resources.append(sys.argv[a]);
-        a+=1;
+        resources.append(sys.argv[a])
+        a+=1
         continue
 
     resources.append( arg )
+
+## -- Main: ----------------------------------------------------
 
 final_resources=[]
 for reslist in resources:
@@ -762,28 +865,22 @@ for reslist in resources:
 
 resources=final_resources
 
-if namespace == None: namespace=default_namespace
-if namespace == "-":  namespace="all"
+if namespace is None:
+    namespace=default_namespace
+if namespace == "-":
+    namespace="all"
 
 if len(resources) == 0: resources = default_resources
 
-full_context=f'{ bold_white("Context:") } { bold_green(context) } / { bold_white("Namespace:") } { bold_green(namespace) } / { bold_white("Resources:") } { bold_green(resources) }\n'
-print(f'full_context={full_context}')
+full_context = build_context_namespace_resources_info(context, namespace, resources)
+print(f'full_context={full_context}\n')
 
 last_op=''
 while True:
     op=''
-    if namespace_exists(namespace):
-        ns_colour = bold_white("Namespace: ") + bold_green(namespace)
-    else:
-        ns_colour = bold_red("Namespace: " + namespace)
 
-    full_context=f'{ bold_white("Context:") } { bold_green(context) } / { ns_colour } / { bold_white("Resources:") } { bold_green(resources) }\n'
-
-    op += full_context
-    #op += f'{ bold_white("Resources:") } { bold_blue( " ".join(resources) ) }\n'
-
-    #if namespace = 'all': NS_FMT=set_ns_fmt()
+    full_context = build_context_namespace_resources_info(context, namespace, resources)
+    op += full_context + '\n'
 
     nodes = get_nodes()
 
@@ -815,12 +912,15 @@ while True:
         if resource.find("dep") == 0:
             match=True
             op+=sprint_deployments(namespace)
+
         if resource.find("ds") == 0 or resource.find("dset") == 0 or resource.find("daemonset") == 0:
             match=True
             op+=sprint_daemon_sets(namespace)
+
         if resource.find("rs") == 0 or resource.find("replicaset") == 0:
             match=True
             op+=sprint_replica_sets(namespace)
+
         if resource.find("ss") == 0 or resource.find("sts") == 0:
             match=True
             op+=sprint_stateful_sets(namespace)
@@ -851,5 +951,3 @@ while True:
         last_op = op
 
     time.sleep(0.5)     # Sleep for 500 milliseconds
-
-
