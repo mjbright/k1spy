@@ -350,97 +350,101 @@ def sprint_pods(p_namespace='all'):
 
     op_lines=[]
     for i in ret.items:
-        pod_ip        = i.status.pod_ip
-        host_ip       = i.status.host_ip
-        host          = host_ip
-
-        if pod_ip is None:
-            pod_ip="-"
-        if host   is None:
-            host="-"
-
-        if host_ip in nodes:
-            host = nodes[host_ip]
-            if host.find("ma") == 0:
-                host=cyan(host) # Colour master nodes
-
-        phase=i.status.phase
-        is_ready=False
-        is_scheduled=False
-
-        status = i.status.to_dict()
-        if 'conditions' in status:
-            if status['conditions']:
-                for cond in status['conditions']:
-                    if 'type' in cond:
-                        ctype = cond['type']
-                        cstatus = cond['status']
-                        if ctype == 'Ready'        and cstatus == "True":
-                            is_ready=True
-                        if ctype == 'PodScheduled' and cstatus == "True":
-                            is_scheduled=True
-
-        info=''
-        if is_scheduled and (not is_ready):
-            try:
-                container0 = status['container_statuses'][0] # !!
-                info=container0['state']['terminated']['reason']
-            except:
-                try:
-                    info=container0['state']['waiting']['reason']
-                except:
-                    info='NonReady'
-        else:
-            info=phase
-
-        cexpected=0
-        if 'container_statuses' in status:
-            cexpected=len( status['container_statuses'] )
-
-        cready=0
-        des_act=f'{cready}/{cexpected}'
-
-        if is_scheduled and is_ready:
-            try:
-                for cont_status in status['container_statuses']:
-                    if 'ready' in cont_status and cont_status['ready']:
-                        cready+=1
-                des_act=f'{cready}/{cexpected} '
-            except:
-                des_act=f'{cready}/{cexpected} '
-
-        if cready < cexpected:
-            des_act=yellow(des_act)
-
-        if info == "Running":
-            info=green("Running")
-
-        if info == "Complete":
-            info=yellow("Running")
-
-        if hasattr(i.metadata,'deletion_timestamp'):
-            if i.metadata.deletion_timestamp:
-                info = red("Terminating")
-
-        age, age_hms = get_age(i)
-
-        if VERBOSE: # Checking for unset vars
-            print(f"namespace={i.metadata.namespace:{NS_FMT}}")
-            print(f"type/name={res_type}{i.metadata.name:{NAME_FMT}}")
-            print(f"info={info}")
-            print(f"pod_ip/host={pod_ip:15s}/{host}\n")
-            print(f"creation_time={i.metadata.creation_time}")
-            print(f"age={age_hms}\n")
-
-        ns_info=''
-        if p_namespace == 'all':
-            ns_info=f'[{i.metadata.namespace:{NS_FMT}}] '
-
-        pod_info = f'{pod_ip:15s}/{host:10s} {age_hms}'
-        line = f'  {ns_info} {i.metadata.name:{NAME_FMT}} {des_act} {info:20s} {pod_info}\n'
-        op_lines.append({'age': age, 'line': line})
+        op_lines.append( get_pod_info(i, res_type, p_namespace) )
 
     return (res_type + sort_lines_by_age(op_lines)).rstrip()
+
+def get_pod_info(i, res_type, p_namespace='all'):
+    ''' Obtain pod_info as a line and age from instance '''
+    pod_ip        = i.status.pod_ip
+    host_ip       = i.status.host_ip
+    host          = host_ip
+
+    if pod_ip is None:
+        pod_ip="-"
+    if host   is None:
+        host="-"
+
+    if host_ip in nodes:
+        host = nodes[host_ip]
+        if host.find("ma") == 0:
+            host=cyan(host) # Colour master nodes
+
+    phase=i.status.phase
+    is_ready=False
+    is_scheduled=False
+
+    status = i.status.to_dict()
+    if 'conditions' in status:
+        if status['conditions']:
+            for cond in status['conditions']:
+                if 'type' in cond:
+                    ctype = cond['type']
+                    cstatus = cond['status']
+                    if ctype == 'Ready'        and cstatus == "True":
+                        is_ready=True
+                    if ctype == 'PodScheduled' and cstatus == "True":
+                        is_scheduled=True
+
+    info=''
+    if is_scheduled and (not is_ready):
+        try:
+            container0 = status['container_statuses'][0] # !!
+            info=container0['state']['terminated']['reason']
+        except:
+            try:
+                info=container0['state']['waiting']['reason']
+            except:
+                info='NonReady'
+    else:
+        info=phase
+
+    cexpected=0
+    if 'container_statuses' in status:
+        cexpected=len( status['container_statuses'] )
+
+    cready=0
+    des_act=f'{cready}/{cexpected}'
+
+    if is_scheduled and is_ready:
+        try:
+            for cont_status in status['container_statuses']:
+                if 'ready' in cont_status and cont_status['ready']:
+                    cready+=1
+            des_act=f'{cready}/{cexpected} '
+        except:
+            des_act=f'{cready}/{cexpected} '
+
+    if cready < cexpected:
+        des_act=yellow(des_act)
+
+    if info == "Running":
+        info=green("Running")
+
+    if info == "Complete":
+        info=yellow("Running")
+
+    if hasattr(i.metadata,'deletion_timestamp'):
+        if i.metadata.deletion_timestamp:
+            info = red("Terminating")
+
+    age, age_hms = get_age(i)
+
+    if VERBOSE: # Checking for unset vars
+        print(f"namespace={i.metadata.namespace:{NS_FMT}}")
+        print(f"type/name={res_type}{i.metadata.name:{NAME_FMT}}")
+        print(f"info={info}")
+        print(f"pod_ip/host={pod_ip:15s}/{host}\n")
+        print(f"creation_time={i.metadata.creation_time}")
+        print(f"age={age_hms}\n")
+
+    ns_info=''
+    if p_namespace == 'all':
+        ns_info=f'[{i.metadata.namespace:{NS_FMT}}] '
+
+    pod_info = f'{pod_ip:15s}/{host:10s} {age_hms}'
+    line = f'  {ns_info} {i.metadata.name:{NAME_FMT}} {des_act} {info:20s} {pod_info}\n'
+    return {'age': age, 'line': line}
 
 def print_deployments(p_namespace='all'):
     ''' print resource info '''
