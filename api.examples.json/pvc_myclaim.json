@@ -1,0 +1,97 @@
+{
+    "apiVersion": "v1",
+    "items": [
+        {
+            "apiVersion": "v1",
+            "kind": "PersistentVolumeClaim",
+            "metadata": {
+                "annotations": {
+                    "pv.kubernetes.io/bind-completed": "yes",
+                    "pv.kubernetes.io/bound-by-controller": "yes"
+                },
+                "creationTimestamp": "2021-02-05T21:51:56Z",
+                "finalizers": [
+                    "kubernetes.io/pvc-protection"
+                ],
+                "managedFields": [
+                    {
+                        "apiVersion": "v1",
+                        "fieldsType": "FieldsV1",
+                        "fieldsV1": {
+                            "f:metadata": {
+                                "f:annotations": {
+                                    ".": {},
+                                    "f:pv.kubernetes.io/bind-completed": {},
+                                    "f:pv.kubernetes.io/bound-by-controller": {}
+                                }
+                            },
+                            "f:spec": {
+                                "f:volumeName": {}
+                            },
+                            "f:status": {
+                                "f:accessModes": {},
+                                "f:capacity": {
+                                    ".": {},
+                                    "f:storage": {}
+                                },
+                                "f:phase": {}
+                            }
+                        },
+                        "manager": "kube-controller-manager",
+                        "operation": "Update",
+                        "time": "2021-02-05T21:51:56Z"
+                    },
+                    {
+                        "apiVersion": "v1",
+                        "fieldsType": "FieldsV1",
+                        "fieldsV1": {
+                            "f:spec": {
+                                "f:accessModes": {},
+                                "f:resources": {
+                                    "f:requests": {
+                                        ".": {},
+                                        "f:storage": {}
+                                    }
+                                },
+                                "f:volumeMode": {}
+                            }
+                        },
+                        "manager": "kubectl-create",
+                        "operation": "Update",
+                        "time": "2021-02-05T21:51:56Z"
+                    }
+                ],
+                "name": "myclaim-1",
+                "namespace": "default",
+                "resourceVersion": "3388974",
+                "uid": "d862f778-fc51-4d7a-8567-62923f168625"
+            },
+            "spec": {
+                "accessModes": [
+                    "ReadWriteOnce"
+                ],
+                "resources": {
+                    "requests": {
+                        "storage": "3Gi"
+                    }
+                },
+                "volumeMode": "Filesystem",
+                "volumeName": "pv0003"
+            },
+            "status": {
+                "accessModes": [
+                    "ReadWriteOnce"
+                ],
+                "capacity": {
+                    "storage": "4Gi"
+                },
+                "phase": "Bound"
+            }
+        }
+    ],
+    "kind": "List",
+    "metadata": {
+        "resourceVersion": "",
+        "selfLink": ""
+    }
+}
