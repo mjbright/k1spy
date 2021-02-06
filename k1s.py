@@ -315,10 +315,17 @@ def sprint_pvcs(p_namespace):
     write_json_items(ret.items, TMP_DIR + '/pvcsN.json')
 
     max_name_len=5
+    max_sclass_len=5
+
     for i in ret.items:
         if len(i.metadata.name) > max_name_len:
             max_name_len=len(i.metadata.name)
+        if i.spec.storage_class_name:
+            storage_class=i.spec.storage_class_name
+            if len(storage_class) > max_sclass_len:
+                max_sclass_len=len(storage_class)
 
+    name_sclass_fmt=f'{max_sclass_len+1}s'
     name_fmt=f'{max_name_len+1}s'
 
     op_lines=[]
@@ -331,18 +338,17 @@ def sprint_pvcs(p_namespace):
 
         access_modes=",".join(i.status.access_modes)
 
+        storage_class=''
+        if i.spec.storage_class_name:
+            storage_class=i.spec.storage_class_name
+
         #print(i.spec)
-        line = f'  {ns_info} {i.metadata.name:{name_fmt}} {i.status.capacity["storage"]:6s} {access_modes} {i.status.phase:10s} {age_hms}\n'
+        line = f'  {ns_info} {i.metadata.name:{name_fmt}} {i.status.capacity["storage"]:6s} {access_modes} {i.status.phase:10s} <{storage_class:{name_sclass_fmt}}> {age_hms}\n'
 
         op_lines.append( {'age': age, 'line': line} )
 
     return res_type + sort_lines_by_age(op_lines)
     #return (res_type + sort_lines_by_age(op_lines)).rstrip()
-
-'''
-    NAME                              STATUS   VOLUME   CAPACITY   ACCESS MODES   STORAGECLASS   AGE
-    persistentvolumeclaim/myclaim-1   Bound    pv0003   4Gi        RWO                           10m
-'''
 
 def print_pvs(p_namespace='all'):
     ''' print resource info '''
@@ -360,6 +366,8 @@ def sprint_pvs(p_namespace):
 
     max_name_len=5
     max_claim_len=5
+    max_sclass_len=5
+
     for i in ret.items:
         if len(i.metadata.name) > max_name_len:
             max_name_len=len(i.metadata.name)
@@ -368,9 +376,14 @@ def sprint_pvs(p_namespace):
             claim=f'{claimRef.namespace}/{claimRef.name}'
             if len(claim) > max_claim_len:
                 max_claim_len=len(claim)
+        if i.spec.storage_class_name:
+            storage_class=i.spec.storage_class_name
+            if len(storage_class) > max_sclass_len:
+                max_sclass_len=len(storage_class)
 
     name_fmt=f'{max_name_len+1}s'
     name_claim_fmt=f'{max_claim_len+1}s'
+    name_sclass_fmt=f'{max_sclass_len+1}s'
 
     op_lines=[]
     for i in ret.items:
@@ -384,14 +397,16 @@ def sprint_pvs(p_namespace):
         policy=i.spec.persistent_volume_reclaim_policy
         access_modes=",".join(i.spec.access_modes)
 
-        #line = f'  {ns_info} {i.metadata.name:{NAME_FMT}} {i.spec.capacity.storage} {i.spec.accessModes} {i.status.phase} {i.spec.persistentVolumeReclaimPolicy}\n'
-
         claim=''
         if i.spec.claim_ref:
             claimRef=i.spec.claim_ref
             claim=f'{claimRef.namespace}/{claimRef.name}'
 
-        line = f'  {ns_info} {i.metadata.name:{name_fmt}} {i.spec.capacity["storage"]:6s} {access_modes} {i.status.phase:10s} {claim:{name_claim_fmt}} {policy} {age_hms}\n'
+        storage_class=''
+        if i.spec.storage_class_name:
+            storage_class=i.spec.storage_class_name
+
+        line = f'  {ns_info} {i.metadata.name:{name_fmt}} {i.spec.capacity["storage"]:6s} {access_modes} {i.status.phase:10s} {claim:{name_claim_fmt}} <{storage_class:{name_sclass_fmt}}> {policy} {age_hms}\n'
         op_lines.append( {'age': age, 'line': line} )
 
     return res_type + sort_lines_by_age(op_lines)
@@ -419,7 +434,8 @@ def sprint_pods(p_namespace='all'):
     for i in ret.items:
         op_lines.append( get_pod_info(i, res_type, p_namespace) )
 
-    return (res_type + sort_lines_by_age(op_lines)).rstrip()
+    #return (res_type + sort_lines_by_age(op_lines)).rstrip()
+    return res_type + sort_lines_by_age(op_lines)
 
 def get_pod_host_info(i):
     ''' Get pod_ip and coloured host name (yellow if master node) '''
