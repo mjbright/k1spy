@@ -480,7 +480,7 @@ def get_pod_desired_actual(status, is_ready, is_scheduled):
     ''' Obtain desired/actual containers '''
 
     cexpected=0
-    if 'container_statuses' in status:
+    if 'container_statuses' in status and status['container_statuses'] is not None:
         cexpected=len( status['container_statuses'] )
 
     cready=0
