@@ -1,0 +1,17 @@
+{
+    "apiVersion": "v1",
+    "kind": "PersistentVolume",
+    "metadata": {"labels":{"type":"local"},"name":"pv0005"},
+    "spec": {
+        "accessModes": [
+            "ReadWriteOnce"
+        ],
+        "capacity": {
+            "storage": "10Gi"
+        },
+        "hostPath": {
+            "path": "/tmp/data05"
+        },
+        "storageClassName": "small-fast"
+    }
+}
