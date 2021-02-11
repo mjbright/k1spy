@@ -701,10 +701,21 @@ def sprint_services(p_namespace='all'):
         port=""
         spec = i.spec.to_dict()
 
-        ext_ips=spec['external_i_ps']
+        ext_ips=[]
+        if i.status.load_balancer:
+            lb=i.status.load_balancer
+            if lb.ingress:
+                for ingress in lb.ingress:
+                    ext_ips.append( ingress.ip )
 
-        # Needs checking, is it this field or load_balancer_ip ??
+        # If not ip in status, use static spec: todo - compare with kubectl output
         if not ext_ips:
+            ext_ips=spec['external_i_ps']
+
+        if ext_ips:
+            # Convert list to string:
+            ext_ips=','.join(ext_ips)
+        else:
             ext_ips='Pending'
 
         if spec and 'ports' in spec and spec['ports'] and 'node_port' in spec['ports'][0]:
