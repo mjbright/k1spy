@@ -785,13 +785,15 @@ def sprint_jobs(p_namespace='all'):
 
     op_lines=[]
     for i in ret.items:
+        info=get_replicas_info(i)
+        image_info = get_image_info(i)
         age, age_hms = get_age(i)
 
         ns_info=''
         if p_namespace == 'all':
             ns_info=f'[{i.metadata.namespace:{NS_FMT}}] '
 
-        line = f"  {ns_info} {i.metadata.name:{NAME_FMT}} {age_hms}\n"
+        line = f"  {ns_info} {i.metadata.name:{NAME_FMT}} {info} {age_hms} {image_info}\n"
         op_lines.append({'age': age, 'line': line})
 
     return res_type + sort_lines_by_age(op_lines)
@@ -815,12 +817,14 @@ def sprint_cron_jobs(p_namespace='all'):
 
     op_lines=[]
     for i in ret.items:
+        info=get_replicas_info(i)
+        image_info = get_image_info(i)
         age, age_hms = get_age(i)
         ns_info=''
         if p_namespace == 'all':
             ns_info=f'[{i.metadata.namespace:{NS_FMT}}] '
 
-        line = f"{ns_info} {i.metadata.name:{NAME_FMT}} {age_hms}\n"
+        line = f"{ns_info} {i.metadata.name:{NAME_FMT}} {info} {age_hms} {image_info}\n"
         op_lines.append({'age': age, 'line': line})
 
     return res_type + sort_lines_by_age(op_lines)
