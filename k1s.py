@@ -232,6 +232,9 @@ def get_image_info(instance):
     if hasattr(instance.spec, 'template'):
         template_spec = instance.spec.template.spec
         image_list=[ container.image for container in template_spec.containers ]
+    elif hasattr(instance.spec, 'job_template'):
+        template_spec = instance.spec.job_template.spec.template.spec
+        image_list=[ container.image for container in template_spec.containers ]
     else:
         image_list=[ container.image for container in instance.spec.containers ]
 
@@ -244,14 +247,48 @@ def get_image_info(instance):
 
 def get_replicas_info(instance):
     ''' get info about pod replicas for controller instance '''
-    spec=instance.spec.replicas
-    stat=instance.status.ready_replicas
-    if stat == spec:
-        replicas_info=green(f'{stat}/{spec}')
+    spec_replicas=0
+    spec_parallelism=-1
+
+    if hasattr(instance.spec, 'replicas'):
+        spec_replicas=instance.spec.replicas
+    if hasattr(instance.spec, 'job_template'): # Jobs/CronJobs
+        spec_replicas=instance.spec.job_template.spec.completions
+        if spec_replicas == None:
+            spec_replicas=1
+        spec_parallelism=instance.spec.job_template.spec.parallelism
+        if spec_parallelism == None:
+            spec_parallelism=1
+
+    stat_replicas=0
+    if hasattr(instance.status, 'ready_replicas'):
+        stat_replicas=instance.status.ready_replicas
+    # This is for jobs/cronjobs - needs correcting
+    # TODO: show number of job pods active / total jobs
+    if hasattr(instance.status, 'active'):
+        active = instance.status.active
+        # print(f'type({active})={type(active)}\n')
+        if active == None:
+            stat_replicas=0
+        elif isinstance(active,int):
+            stat_replicas=active # isn't this an array of Object?
+        else:
+            print( stat_replicas )
+            stat_replicas=len(active)
+        #stat_replicas=instance.status.active # isn't this an array of Object?
+        #if instance.status.active:
+
+    jobs_extra=''
+    if spec_parallelism>=0:
+        jobs_extra=f'{spec_parallelism}/'
+
+    if stat_replicas == spec_replicas:
+        replicas_info=green(f'{stat_replicas}/{jobs_extra}{spec_replicas}')
     else:
-        if stat is None:
-            stat = 0
-        replicas_info=yellow(f'{stat}/{spec}')
+        if stat_replicas is None:
+            stat_replicas = 0
+        replicas_info=yellow(f'{stat_replicas}/{jobs_extra}{spec_replicas}')
+
     return replicas_info
 
 def print_nodes():
@@ -824,7 +861,7 @@ def sprint_cron_jobs(p_namespace='all'):
         if p_namespace == 'all':
             ns_info=f'[{i.metadata.namespace:{NS_FMT}}] '
 
-        line = f"{ns_info} {i.metadata.name:{NAME_FMT}} {info} {age_hms} {image_info}\n"
+        line = f"  {ns_info} {i.metadata.name:{NAME_FMT}} {info} {age_hms} {image_info}\n"
         op_lines.append({'age': age, 'line': line})
 
     return res_type + sort_lines_by_age(op_lines)
