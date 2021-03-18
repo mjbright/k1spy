@@ -225,6 +225,23 @@ def get_age(i):
 
     return age_secs, set_hms(age_secs)
 
+def get_image_info(instance):
+    image_list=[]
+    image_info=''
+
+    if hasattr(instance.spec, 'template'):
+        template_spec = instance.spec.template.spec
+        image_list=[ container.image for container in template_spec.containers ]
+    else:
+        image_list=[ container.image for container in instance.spec.containers ]
+
+    if len(image_list) > 0:
+        image_info = '[' + ','.join(image_list) + ']'
+
+    #items[0].spec.template.spec.containers[].image
+    #items[0].spec.containers[].image
+    return image_info
+
 def get_replicas_info(instance):
     ''' get info about pod replicas for controller instance '''
     spec=instance.spec.replicas
