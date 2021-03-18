@@ -553,6 +553,7 @@ def get_pod_info(i, res_type, p_namespace='all'):
 
     (pod_ip, host) = get_pod_host_info(i)
     (desired_actual_c, pod_status) = get_pod_status(i)
+    image_info = get_image_info(i)
     age, age_hms = get_age(i)
 
     if VERBOSE: # Checking for unset vars
@@ -561,6 +562,7 @@ def get_pod_info(i, res_type, p_namespace='all'):
         print(f"pod_status={pod_status}")
         print(f"pod_ip/host={pod_ip:15s}/{host}\n")
         print(f"creation_time={i.metadata.creation_time}")
+        print(f"image_info={image_info}\n")
         print(f"age={age_hms}\n")
 
     ns_info=''
@@ -568,7 +570,7 @@ def get_pod_info(i, res_type, p_namespace='all'):
         ns_info=f'[{i.metadata.namespace:{NS_FMT}}] '
 
     pod_host_age = f'{pod_ip:15s}/{host:10s} {age_hms}'
-    pod_info = f'{pod_status:20s} {pod_host_age}'
+    pod_info = f'{pod_status:20s} {pod_host_age} {image_info}'
     line = f'  {ns_info} {i.metadata.name:{NAME_FMT}} {desired_actual_c} {pod_info}\n'
 
     return {'age': age, 'line': line}
