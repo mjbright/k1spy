@@ -1003,6 +1003,7 @@ def sprint_all_resources(resource):
     output+=sprint_deployments(namespace)
     output+=sprint_replica_sets(namespace)
     output+=sprint_stateful_sets(namespace)
+    output+=sprint_daemon_sets(namespace)
     output+=sprint_pods(namespace)
     output+=sprint_jobs(namespace)
     output+=sprint_cron_jobs(namespace)
