@@ -1021,23 +1021,26 @@ def main_loop():
     global nodes
 
     last_output=''
-    while True:
-        output=''
+    try:
+        while True:
+            output=''
 
-        full_context = build_context_namespace_resources_info(context, namespace, resources)
-        output += full_context + '\n'
+            full_context = build_context_namespace_resources_info(context, namespace, resources)
+            output += full_context + '\n'
 
-        nodes = get_nodes()
+            nodes = get_nodes()
 
-        for resource in resources:
-            output += sprint_resource(resource)
+            for resource in resources:
+                output += sprint_resource(resource)
 
-        if output != last_output:
-            cls()
-            print(output)
-            last_output = output
+            if output != last_output:
+                cls()
+                print(output)
+                last_output = output
 
-        time.sleep(0.5)     # Sleep for 500 milliseconds
+            time.sleep(0.5)     # Sleep for 500 milliseconds
+    except KeyboardInterrupt:
+        pass
 
 def sprint_all_resources(resource):
     ''' Build up output for 'all' resource types '''
