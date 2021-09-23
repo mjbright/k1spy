@@ -664,6 +664,7 @@ def sprint_daemon_sets(p_namespace='all'):
 
     op_lines=[]
     for i in ret.items:
+        image_info = get_image_info(i)
         age, age_hms = get_age(i)
 
         ns_info=''
