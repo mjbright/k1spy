@@ -390,7 +390,10 @@ def sprint_pvcs(p_namespace):
         if p_namespace == 'all':
             ns_info=f'[{i.metadata.namespace:{NS_FMT}}] '
 
-        access_modes=",".join(i.status.access_modes)
+        access_modes= str( i.status.access_modes )
+        if i.status.access_modes != None:
+            access_modes=",".join(i.status.access_modes)
+        #access_modes=",".join(i.status.access_modes)
 
         storage_class=''
         if i.spec.storage_class_name:
