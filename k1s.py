@@ -491,6 +491,9 @@ def sprint_pods(p_namespace='all'):
 
     op_lines=[]
     for i in ret.items:
+        if i.metadata.labels:
+            if 'hide' in i.metadata.labels and i.metadata.labels['hide'] == 'k1spy':
+                continue
         op_lines.append( get_pod_info(i, res_type, p_namespace) )
 
     #return (res_type + sort_lines_by_age(op_lines)).rstrip()
