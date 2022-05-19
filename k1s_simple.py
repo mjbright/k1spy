@@ -2,6 +2,8 @@
 
 '''
     Very simple example of using Python Kubernetes bindings
+
+    NOTE: See https://github.com/kubernetes-client/python/blob/master/kubernetes/README.md for API specs, e.g. search for CoreV1APi, then for methods ...
 '''
 
 import os
