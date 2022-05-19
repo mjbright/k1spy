@@ -3,6 +3,8 @@
 '''
     TUI dashboard for Kubernetes resources
     Example of use of kubernetes python module
+
+    NOTE: See https://github.com/kubernetes-client/python/blob/master/kubernetes/README.md for API specs, e.g. search for CoreV1APi, then for methods ...
 '''
 
 import os
@@ -747,6 +749,24 @@ def print_services(p_namespace='all'):
     ''' print resource info '''
     print(sprint_services(p_namespace))
 
+def get_endpoints(p_svc_name, p_namespace):
+    # See: https://github.com/kubernetes-client/python/blob/master/kubernetes/docs/CoreV1Api.md#list_namespaced_endpoints
+
+    ret = corev1.list_namespaced_endpoints(watch=False, namespace=p_namespace)
+    for i in ret.items:
+        if i.metadata.name == p_svc_name:
+            #print(i.subsets[0])
+            #print(i.subsets[0].addresses)
+            #print(i.subsets[0].not_ready_addresses)
+            ready_ep=i.subsets[0].addresses
+            unready_ep=i.subsets[0].not_ready_addresses
+            if ready_ep   == None: ready_ep=[]
+            if unready_ep == None: unready_ep=[]
+            return(ready_ep, unready_ep)
+            #sys.exit()
+            #return [99]
+    return ([],[])
+
 def sprint_services(p_namespace='all'):
     ''' build single-line representing resource info '''
     res_type =  'services:' if SHOW_TYPES else ''
@@ -800,8 +820,13 @@ def sprint_services(p_namespace='all'):
         if p_namespace == 'all':
             ns_info=f'[{i.metadata.namespace:{NS_FMT}}] '
 
+        endpoint_addresses = get_endpoints(i.metadata.name, i.metadata.namespace)
+        num_ready_ep_addresses = len(endpoint_addresses[0])
+        num_notready_ep_addresses = len(endpoint_addresses[1])
+        endpoints_info=f'{num_ready_ep_addresses}/{num_ready_ep_addresses + num_notready_ep_addresses}'
+
         #svc_info = f'{cluster_ip:14s} {svc_type:12s} {ext_ips:15s} {port:14s}{policy:8s} {age_hms}'
-        svc_info = f'{cluster_ip:14s} {spec["type"]:12s} {ext_ips:15s} {port:14s} {age_hms}'
+        svc_info = f'{cluster_ip:14s} {spec["type"]:12s} {ext_ips:15s} {port:14s} eps:{endpoints_info} {age_hms}'
         line = f'  {ns_info} {i.metadata.name:{NAME_FMT}} {svc_info}\n'
         op_lines.append({'age': age, 'line': line})
 
