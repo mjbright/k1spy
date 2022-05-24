@@ -496,6 +496,9 @@ def sprint_pods(p_namespace='all'):
                 continue
         op_lines.append( get_pod_info(i, res_type, p_namespace) )
 
+    if len(op_lines) == 0:
+        return ''
+
     #return (res_type + sort_lines_by_age(op_lines)).rstrip()
     return res_type + sort_lines_by_age(op_lines)
 
@@ -761,11 +764,12 @@ def get_endpoints(p_svc_name, p_namespace):
             #print(i.subsets[0])
             #print(i.subsets[0].addresses)
             #print(i.subsets[0].not_ready_addresses)
-            ready_ep=i.subsets[0].addresses
-            unready_ep=i.subsets[0].not_ready_addresses
-            if ready_ep   == None: ready_ep=[]
-            if unready_ep == None: unready_ep=[]
-            return(ready_ep, unready_ep)
+            if i.subsets != None:
+                ready_ep=i.subsets[0].addresses
+                unready_ep=i.subsets[0].not_ready_addresses
+                if ready_ep   == None: ready_ep=[]
+                if unready_ep == None: unready_ep=[]
+                return(ready_ep, unready_ep)
             #sys.exit()
             #return [99]
     return ([],[])
