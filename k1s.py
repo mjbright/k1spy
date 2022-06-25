@@ -29,6 +29,8 @@ namespace='default'
 #default_resources=["pods"]
 default_resources=["all"]
 
+DEFAULT_NAMESPACE='default'
+
 ## -- Get kubeconfig/cluster information: -------------------------
 
 # Make sure ~/.kube/config is pointing to a valid cluster
@@ -43,28 +45,29 @@ if KUBECONFIG is None:
 if os.path.exists(KUBECONFIG):
     print(f'Using KUBECONFIG={KUBECONFIG}')
     config.load_kube_config(KUBECONFIG)
+
+    ## -- Get context/namespace  information: -------------------------
+
+    # {'context': {'cluster': 'kubernetes', 'namespace': 'k8scenario', 'user': 'kubernetes-admin'},
+    #  'name': 'k8scenario'}
+    contexts, active_context = config.list_kube_config_contexts()
+    if 'namespace' in active_context['context']:
+        DEFAULT_NAMESPACE=active_context['context']['namespace']
+
+    #print(active_context)
+    context=active_context['name']
+    print(f'context={context} namespace={DEFAULT_NAMESPACE}')
 else:
     print(f'No such kubeconfig file as "{KUBECONFIG}" - assuming in cluster')
     config.load_incluster_config()
+    KUBECONFIG=None
+    context=None
 
 #os.mkdir( '~/tmp', 0755 )
 TMP_DIR = HOME + '/tmp'
 if not os.path.exists(TMP_DIR):
     os.mkdir( TMP_DIR )
 
-## -- Get context/namespace  information: -------------------------
-
-contexts, active_context = config.list_kube_config_contexts()
-# {'context': {'cluster': 'kubernetes', 'namespace': 'k8scenario', 'user': 'kubernetes-admin'},
-#  'name': 'k8scenario'}
-
-DEFAULT_NAMESPACE='default'
-if 'namespace' in active_context['context']:
-    DEFAULT_NAMESPACE=active_context['context']['namespace']
-
-#print(active_context)
-context=active_context['name']
-print(f'context={context} namespace={DEFAULT_NAMESPACE}')
 
 ## -- Get API clients: --------------------------------------------
 
@@ -965,8 +968,13 @@ def namespace_exists(p_namespace):
     return False
 
 def build_context_namespace_resources_info(p_context, p_namespace, p_resources):
-    ''' convenience: build up context status line '''
-    pr_context=f'{ bold_white("Context:") } { bold_green(p_context) }'
+
+    if context:
+        ''' convenience: build up context status line '''
+        pr_context=f'{ bold_white("Context:") } { bold_green(p_context) }'
+    else:
+        pr_context=f'{ bold_white("Context:") } { bold_green("in-cluster") }'
+
     #pr_resources=f'{ bold_white("Resources:") } { bold_green(p_resources) }'
     pr_resources=f'{ bold_white("Resources:") } { bold_green( ",".join(p_resources)) }'
     if namespace_exists(p_namespace):
