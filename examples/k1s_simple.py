@@ -24,17 +24,16 @@ if KUBECONFIG is None:
 if os.path.exists(KUBECONFIG):
     print(f'Using KUBECONFIG={KUBECONFIG}')
     config.load_kube_config(KUBECONFIG)
+    ## -- Get context/namespace  information: -------------------------
+
+    contexts, active_context = config.list_kube_config_contexts()
+    # {'context': {'cluster': 'kubernetes', 'namespace': 'k8scenario', 'user': 'kubernetes-admin'}, 'name': 'k8scenario'}
+    #print(active_context)
+    context=active_context['name']
+    print(f'context={context}')
 else:
     print(f'No such kubeconfig file as "{KUBECONFIG}" - assuming in cluster')
     config.load_incluster_config()
-
-## -- Get context/namespace  information: -------------------------
-
-contexts, active_context = config.list_kube_config_contexts()
-# {'context': {'cluster': 'kubernetes', 'namespace': 'k8scenario', 'user': 'kubernetes-admin'}, 'name': 'k8scenario'}
-#print(active_context)
-context=active_context['name']
-print(f'context={context}')
 
 ## -- Get API clients: --------------------------------------------
 
