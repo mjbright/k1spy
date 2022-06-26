@@ -1,7 +1,15 @@
 #!/usr/bin/env python3
 
 '''
-    Very simple example of using Python Kubernetes bindings
+    Summarize request/limit settings across nodes/namespaces:
+
+    USAGE:
+       To see a summary of requests/limits for each Node, each Namespace
+           ./k1s_simple_req_limits.py -a -A
+       To see a Pod detail + summary of requests/limits for each Node, each Namespace
+           ./k1s_simple_req_limits.py -a -A -d
+       To see a Pod detail + summary of requests/limits for current Namespace
+           ./k1s_simple_req_limits.py -a -A -d
 
     NOTE: See https://github.com/kubernetes-client/python/blob/master/kubernetes/README.md for API specs, e.g. search for CoreV1APi, then for methods ...
 '''
@@ -63,10 +71,6 @@ def cumulate_resource_req_limits(resources, node_name, namespace):
             val=from_human_value_cpu(resources.requests['cpu'])
             if VERBOSE: print(f'cpu==>{resources.requests["cpu"]} ==> {val}')
             node_resources[node_name]['req_cpu']+=val
-            #if val != 0.0:
-                #print(f"Added {val} to node_resources[{node_name}]['req_cpu'] ==> {node_resources[node_name]['req_cpu']}")
-            #else:
-                #print(f"???? Added {val} to node_resources[{node_name}]['req_cpu'] ==> {node_resources[node_name]['req_cpu']}")
             ns_resources[namespace]['req_cpu']+=val
         if 'memory' in resources.requests:
             val=from_human_value_memory(resources.requests['memory'])
@@ -195,7 +199,6 @@ for instance in itemlist.items:
     node_name = instance.metadata.name
     nodes.append(node_name)
     node_resources[node_name]={'req_cpu': 0.0, 'limit_cpu': 0.0, 'req_mem': 0.0, 'limit_mem': 0.0}
-    print(node_resources[node_name]['req_cpu'])
     print(node_name)
 
 print("---- Namespaces: --------")
