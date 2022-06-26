@@ -48,9 +48,9 @@ def get_resource_req_limits(resources, node_name, namespace, node_resources, ns_
     ret_str=''
 
     if not node_name in node_resources:
-        node_resources[node_name]={'req': 0, 'limit': 0}
+        node_resources[node_name]={'req_cpu': 0.0, 'limit_cpu': 0.0, 'req_mem': 0.0, 'limit_mem': 0.0}
     if not namespace in ns_resources:
-        ns_resources[namespace]={'req': 0, 'limit': 0}
+        ns_resources[namespace]={'req_cpu': 0.0, 'limit_cpu': 0.0, 'req_mem': 0.0, 'limit_mem': 0.0}
 
     '''
     resources:
@@ -62,37 +62,73 @@ def get_resource_req_limits(resources, node_name, namespace, node_resources, ns_
             memory: 700Mi
     '''
     if hasattr(resources, 'requests'):
-        #ret_str+=f" REQ={resources['requests']}"
-        ret_str+=f" REQ={resources.requests}"
+        if hasattr(resources.requests, 'cpu'):
+            val=human_value_cpu(resources.requests.cpu)
+            node_resources[node_name]['req_cpu']+=val
+            ns_resources[namespace]['req_cpu']+=val
+        if hasattr(resources.requests, 'memory'):
+            val=human_value_memory(resources.requests.memory)
+            node_resources[node_name]['req_mem']+=val
+            ns_resources[namespace]['req_mem']+=val
+
+        if resources.requests:
+            ret_str+=f" REQ={resources.requests}"
+
     if hasattr(resources, 'limits'):
-        #ret_str+=f" LIMIT={resources['limits']}"
-        ret_str+=f" LIMIT={resources.limits}"
+        if hasattr(resources.limits, 'cpu'):
+            val=human_value_cpu(resources.limits.cpu)
+            node_resources[node_name]['limit_cpu']+=val
+            ns_resources[namespace]['limit_cpu']+=val
+        if hasattr(resources.limits, 'memory'):
+            val=human_value_memory(resources.limits.memory)
+            node_resources[node_name]['limit_mem']+=val
+            ns_resources[namespace]['limit_mem']+=val
+
+        if resources.limits:
+            ret_str+=f" LIMIT={resources.limits}"
     
     return ret_str
 
-## -- Args: -------------------------------------------------------
+def human_value_memory(str_value):
+    if str_value[-2:-1] == 'Ti':
+        return float(str_value)*1000*1000*1000*1000
+    if str_value[-2:-1] == 'Gi':
+        return float(str_value)*1000*1000*1000
+    if str_value[-2:-1] == 'Mi':
+        return float(str_value)*1000*1000
+    if str_value[-2:-1] == 'Ki':
+        return float(str_value)*1000
+    return float(str_value)
 
-a=1
+def human_value_cpu(str_value):
+    if str_value[-1] == 'm':
+        return float(str_value)/1000
+    return float(str_value)
+
+
+## -- Args: -------------------------------------------------------
 
 namespace='default'
 
 SHOW_RESOURCELESS_PODS=False
 
+a=1
 while a < len(sys.argv):
     arg=sys.argv[a]
     a+=1
+    #print(f'**** {arg}')
     if arg == "-A":
         namespace=None
-        pass
+        continue
 
     if arg == "-n":
         namespace=sys.argv[a]
         a+=1
-        pass
+        continue
 
     if arg == "-a":
         SHOW_RESOURCELESS_PODS=True
-        pass
+        continue
 
     die(f"Unknown option '{arg}'")
 
@@ -124,13 +160,16 @@ for instance in itemlist.items:
     namespace = instance.metadata.namespace
     pod_name = instance.metadata.name
 
-    sys.stdout.write(f'[{node_name}] {namespace}/{pod_name}\n')
+    pod_resource_info=''
     for c in instance.spec.containers:
         if not hasattr(c, 'resources') and SHOW_RESOURCELESS_PODS:
-            print(f'- {c.name}')
+            pod_resource_info+=f'- {c.name}\n'
         else:
             resource_str = get_resource_req_limits(c.resources, node_name, namespace, node_resources, ns_resources)
-            print(f'- {c.name}: {resource_str}')
+            if resource_str != '' or SHOW_RESOURCELESS_PODS:
+                pod_resource_info+=f'- {c.name}: {resource_str}\n'
         #else:
             #print(f'NO {pod_name}')
+    if pod_resource_info != '':
+        sys.stdout.write(f'[{node_name}] {namespace}/{pod_name}\n{pod_resource_info}')
 
