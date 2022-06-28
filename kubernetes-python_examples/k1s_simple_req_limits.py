@@ -21,30 +21,12 @@ from   kubernetes import client, config
 node_resources={}
 ns_resources={}
 
-## -- Get kubeconfig/cluster information: -------------------------
+namespace='default'
 
-# Make sure ~/.kube/config is pointing to a valid cluster
-HOME=os.getenv('HOME')
-DEFAULT_KUBECONFIG=HOME+'/.kube/config'
-KUBECONFIG=os.getenv('KUBECONFIG')
-
-if KUBECONFIG is None:
-    KUBECONFIG=DEFAULT_KUBECONFIG
-
-#config.load_kube_config()
-if os.path.exists(KUBECONFIG):
-    print(f'Using KUBECONFIG={KUBECONFIG}')
-    config.load_kube_config(KUBECONFIG)
-    ## -- Get context/namespace  information: -------------------------
-
-    contexts, active_context = config.list_kube_config_contexts()
-    # {'context': {'cluster': 'kubernetes', 'namespace': 'k8scenario', 'user': 'kubernetes-admin'}, 'name': 'k8scenario'}
-    #print(active_context)
-    context=active_context['name']
-    print(f'context={context}')
-else:
-    print(f'No such kubeconfig file as "{KUBECONFIG}" - assuming in cluster')
-    config.load_incluster_config()
+LIST_NODES_NAMESPACES=False
+SHOW_RESOURCELESS_PODS=False
+SHOW_DETAILS=False
+VERBOSE=False
 
 ## -- Func: -------------------------------------------------------
 
@@ -131,13 +113,23 @@ def cumulate_items(itemlist):
         if pod_resource_info != '' and SHOW_DETAILS:
             sys.stdout.write(f'[{node_name}] {namespace}/{pod_name}\n{pod_resource_info}')
 
+def get_namespace_totals(namespace):
+    req_cpu=ns_resources[namespace]['req_cpu']
+    req_mem=ns_resources[namespace]['req_mem']
+    limit_cpu=ns_resources[namespace]['limit_cpu']
+    limit_mem=ns_resources[namespace]['limit_mem']
+    return (req_cpu, req_mem, limit_cpu, limit_mem)
+
+def get_node_totals(node):
+
+    #print(node_resources[node])
+    req_cpu=node_resources[node]['req_cpu']
+    req_mem=node_resources[node]['req_mem']
+    limit_cpu=node_resources[node]['limit_cpu']
+    limit_mem=node_resources[node]['limit_mem']
+    return (req_cpu, req_mem, limit_cpu, limit_mem)
+
 ## -- Args: -------------------------------------------------------
-
-namespace='default'
-
-SHOW_RESOURCELESS_PODS=False
-SHOW_DETAILS=False
-VERBOSE=False
 
 a=1
 while a < len(sys.argv):
@@ -157,6 +149,10 @@ while a < len(sys.argv):
         SHOW_RESOURCELESS_PODS=True
         continue
 
+    if arg == "-l":
+        LIST_NODES_NAMESPACES=True
+        continue
+
     if arg == "-d":
         SHOW_DETAILS=True
         continue
@@ -167,21 +163,30 @@ while a < len(sys.argv):
 
     die(f"Unknown option '{arg}'")
 
-def get_namespace_totals(namespace):
-    req_cpu=ns_resources[namespace]['req_cpu']
-    req_mem=ns_resources[namespace]['req_mem']
-    limit_cpu=ns_resources[namespace]['limit_cpu']
-    limit_mem=ns_resources[namespace]['limit_mem']
-    return (req_cpu, req_mem, limit_cpu, limit_mem)
+## -- Get kubeconfig/cluster information: -------------------------
 
-def get_node_totals(node):
+# Make sure ~/.kube/config is pointing to a valid cluster
+HOME=os.getenv('HOME')
+DEFAULT_KUBECONFIG=HOME+'/.kube/config'
+KUBECONFIG=os.getenv('KUBECONFIG')
 
-    #print(node_resources[node])
-    req_cpu=node_resources[node]['req_cpu']
-    req_mem=node_resources[node]['req_mem']
-    limit_cpu=node_resources[node]['limit_cpu']
-    limit_mem=node_resources[node]['limit_mem']
-    return (req_cpu, req_mem, limit_cpu, limit_mem)
+if KUBECONFIG is None:
+    KUBECONFIG=DEFAULT_KUBECONFIG
+
+#config.load_kube_config()
+if os.path.exists(KUBECONFIG):
+    if SHOW_DETAILS: print(f'Using KUBECONFIG={KUBECONFIG}')
+    config.load_kube_config(KUBECONFIG)
+    ## -- Get context/namespace  information: -------------------------
+
+    contexts, active_context = config.list_kube_config_contexts()
+    # {'context': {'cluster': 'kubernetes', 'namespace': 'k8scenario', 'user': 'kubernetes-admin'}, 'name': 'k8scenario'}
+    #print(active_context)
+    context=active_context['name']
+    if SHOW_DETAILS: print(f'context={context}')
+else:
+    if SHOW_DETAILS: print(f'No such kubeconfig file as "{KUBECONFIG}" - assuming in cluster')
+    config.load_incluster_config()
 
 ## -- Get API clients: --------------------------------------------
 
@@ -192,24 +197,24 @@ corev1 = client.CoreV1Api()
 
 ## -- Access API: -------------------------------------------------
 
-print("---- Nodes: -------------")
+if LIST_NODES_NAMESPACES: print("---- Nodes: -------------")
 itemlist = corev1.list_node(watch=False)
 nodes=[]
 for instance in itemlist.items:
     node_name = instance.metadata.name
     nodes.append(node_name)
     node_resources[node_name]={'req_cpu': 0.0, 'limit_cpu': 0.0, 'req_mem': 0.0, 'limit_mem': 0.0}
-    print(node_name)
+    if LIST_NODES_NAMESPACES: print(node_name)
 
-print("---- Namespaces: --------")
+if LIST_NODES_NAMESPACES: print("---- Namespaces: --------")
 itemlist = corev1.list_namespace(watch=False)
 for instance in itemlist.items:
     loop_namespace = instance.metadata.name
     ns_resources[loop_namespace]={'req_cpu': 0.0, 'limit_cpu': 0.0, 'req_mem': 0.0, 'limit_mem': 0.0}
-    print(loop_namespace)
+    if LIST_NODES_NAMESPACES: print(loop_namespace)
 
 if namespace == None:
-    print(f'---- Pods: --------------')
+    print(f'---- Summary: --------------')
     #itemlist = corev1.list_pod_for_all_namespaces(watch=False)
     itemlist = corev1.list_namespace(watch=False)
     for item in itemlist.items:
@@ -223,7 +228,7 @@ if namespace == None:
         print(f'NAMESPACE {loop_namespace:15} total req_cpu={req_cpu:6.3} req_mem={s_req_mem} limit_cpu={limit_cpu:6.3} limit_mem={s_limit_mem}')
 else:
     #p_namespace='default'
-    print(f"---- Pods: -------------- in '{namespace}' namespace")
+    print(f"---- Summary: -------------- in '{namespace}' namespace")
     itemlist = corev1.list_namespaced_pod(watch=False, namespace=namespace)
     cumulate_items(itemlist)
     (req_cpu, req_mem, limit_cpu, limit_mem) = get_namespace_totals(namespace)
