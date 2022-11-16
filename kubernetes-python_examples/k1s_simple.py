@@ -39,8 +39,6 @@ else:
 
 corev1 = client.CoreV1Api()
 #appsv1 = client.AppsV1Api()
-#batchv1 = client.BatchV1Api()
-#batchv1beta1 = client.BatchV1beta1Api()
 
 ## -- Access API: -------------------------------------------------
 

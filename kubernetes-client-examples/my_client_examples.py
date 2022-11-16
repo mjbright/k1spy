@@ -67,7 +67,7 @@ config.load_kube_config()
 corev1 = client.CoreV1Api()
 appsv1 = client.AppsV1Api()
 batchv1 = client.BatchV1Api()
-batchv1beta1 = client.BatchV1beta1Api()
+#batchv1beta1 = client.BatchV1beta1Api()
 
 
 # In[83]:
@@ -237,9 +237,9 @@ get_jobs(namespace='default')
 
 def get_cronjobs(namespace='all'):
     if namespace == 'all':
-        ret = batchv1beta1.list_cron_job_for_all_namespaces(watch=False)
+        ret = batchv1.list_cron_job_for_all_namespaces(watch=False)
     else:
-        ret = batchv1beta1.list_namespaced_cron_job(watch=False, namespace=namespace)
+        ret = batchv1.list_namespaced_cron_job(watch=False, namespace=namespace)
     for i in ret.items:
         #deploy_name = i.metadata.name
         #deploy_namespace = i.metadata.namespace

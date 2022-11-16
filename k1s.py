@@ -74,7 +74,8 @@ if not os.path.exists(TMP_DIR):
 corev1 = client.CoreV1Api()
 appsv1 = client.AppsV1Api()
 batchv1 = client.BatchV1Api()
-batchv1beta1 = client.BatchV1beta1Api()
+#batchv1beta1 = client.BatchV1beta1Api()
+batchv1 = client.BatchV1Api()
 
 #============ COLOUR DEFINITIONS ==============================
 
@@ -884,9 +885,9 @@ def sprint_cron_jobs(p_namespace='all'):
     res_type =  'cronjobs:' if SHOW_TYPES else ''
 
     if p_namespace == 'all':
-        ret = batchv1beta1.list_cron_job_for_all_namespaces(watch=False)
+        ret = batchv1.list_cron_job_for_all_namespaces(watch=False)
     else:
-        ret = batchv1beta1.list_namespaced_cron_job(watch=False, namespace=p_namespace)
+        ret = batchv1.list_namespaced_cron_job(watch=False, namespace=p_namespace)
     if len(ret.items) == 0:
         return ''
     write_json_items(ret.items, TMP_DIR + '/cronjobsN.json')
