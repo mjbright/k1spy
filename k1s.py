@@ -1034,7 +1034,7 @@ def main_loop():
 
         if output != last_output:
             cls()
-            print(output)
+            print(output.rstrip())
             last_output = output
 
         time.sleep(0.5)     # Sleep for 500 milliseconds
