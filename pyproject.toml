@@ -1,0 +1,15 @@
+[project]
+name = "kubernetes-python-examples"
+version = "1.0.0"
+description = "Clear, practical examples for the official Kubernetes Python client"
+requires-python = ">=3.12"
+dependencies = [
+    "kubernetes>=32,<33",
+]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
