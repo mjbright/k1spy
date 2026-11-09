@@ -804,7 +804,7 @@ def sprint_services(p_namespace='all'):
 
         # If not ip in status, use static spec: todo - compare with kubectl output
         if not ext_ips:
-            ext_ips=spec['external_i_ps']
+            ext_ips=spec['external_ips']
 
         if ext_ips:
             # Convert list to string:
